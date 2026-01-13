@@ -104,7 +104,21 @@ else
 fi
 echo ""
 
-# Step 3: Install Python dependencies
+# Step 3: Install system dependencies
+print_step "Installing system dependencies..."
+if command -v apt-get &> /dev/null; then
+    apt-get update -qq
+    apt-get install -y -qq pkg-config libssl-dev build-essential > /dev/null 2>&1
+    echo "  Installed: pkg-config, libssl-dev, build-essential"
+elif command -v yum &> /dev/null; then
+    yum install -y -q pkgconfig openssl-devel gcc > /dev/null 2>&1
+    echo "  Installed: pkgconfig, openssl-devel, gcc"
+else
+    print_warn "Could not detect package manager. You may need to install OpenSSL dev libraries manually."
+fi
+echo ""
+
+# Step 4: Install Python dependencies
 print_step "Checking Python and huggingface_hub..."
 if command -v python3 &> /dev/null; then
     echo "  Python: $(python3 --version)"
@@ -115,7 +129,7 @@ else
 fi
 echo ""
 
-# Step 4: Setup workspace
+# Step 5: Setup workspace
 print_step "Setting up workspace..."
 WORKSPACE_DIR="/workspace/shardlm"
 
@@ -135,7 +149,7 @@ else
 fi
 echo ""
 
-# Step 5: Build server and client
+# Step 6: Build server and client
 print_step "Building ShardLM (this may take 5-10 minutes on first run)..."
 echo "  Building server with CUDA support..."
 cargo build -p shardlm-v2-server --features cuda --release 2>&1 | tail -3
@@ -144,7 +158,7 @@ cargo build -p shardlm-v2-client --release 2>&1 | tail -3
 echo "  Build complete!"
 echo ""
 
-# Step 6: Model selection
+# Step 7: Model selection
 print_step "Model selection..."
 
 if [ -z "$MODEL_CHOICE" ]; then
@@ -211,7 +225,7 @@ case $MODEL_CHOICE in
 esac
 echo ""
 
-# Step 7: Summary
+# Step 8: Summary
 print_step "Setup Complete!"
 echo ""
 echo "========================================"
