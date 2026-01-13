@@ -485,6 +485,7 @@ After setup, start the server:
 ```bash
 SHARDLM_V2_MODEL_DIR=/workspace/qwen2.5-1.5b-instruct-weights \
 SHARDLM_V2_MODEL_ARCH=qwen2_5_1_5b \
+SHARDLM_V2_NUM_GPUS=1 \
 SHARDLM_V2_PORT=9090 \
 ./target/release/shardlm-v2-server
 ```
