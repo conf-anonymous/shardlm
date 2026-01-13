@@ -108,6 +108,36 @@ impl ShardLmClient {
         Ok(())
     }
 
+    /// Check if tokenizer uses ChatML format (Qwen)
+    pub fn uses_chatml(&self) -> bool {
+        self.tokenizer
+            .as_ref()
+            .map(|t| t.token_to_id("<|im_start|>").is_some())
+            .unwrap_or(false)
+    }
+
+    /// Format prompt with ChatML template for instruction-tuned models
+    ///
+    /// This wraps the user prompt in the proper chat format expected by the model.
+    pub fn format_chat_prompt(&self, user_message: &str) -> String {
+        if self.uses_chatml() {
+            // Qwen 2.5 ChatML format
+            format!(
+                "<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n",
+                user_message
+            )
+        } else if self.tokenizer.is_some() {
+            // Llama 3 format
+            format!(
+                "<|start_header_id|>user<|end_header_id|>\n\n{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
+                user_message
+            )
+        } else {
+            // No tokenizer, just return raw prompt
+            user_message.to_string()
+        }
+    }
+
     /// Check if tokenizer is loaded
     pub fn has_tokenizer(&self) -> bool {
         self.tokenizer.is_some()
@@ -470,19 +500,40 @@ impl ShardLmClient {
     /// Complete generation: embeddings → prefill → decode
     ///
     /// This is the main high-level API for running inference.
+    /// For streaming output, use `generate_streaming` instead.
     pub async fn generate(
         &mut self,
         prompt: &str,
         max_tokens: usize,
         temperature: f32,
     ) -> Result<GenerationResult> {
+        self.generate_streaming(prompt, max_tokens, temperature, |_| {}).await
+    }
+
+    /// Generate with streaming output
+    ///
+    /// Like `generate`, but calls `on_token` callback with each decoded token text.
+    /// This allows real-time display of generated tokens.
+    pub async fn generate_streaming<F>(
+        &mut self,
+        prompt: &str,
+        max_tokens: usize,
+        temperature: f32,
+        mut on_token: F,
+    ) -> Result<GenerationResult>
+    where
+        F: FnMut(&str),
+    {
         // Ensure we have a session
         if self.session_id.is_none() {
             self.create_session().await?;
         }
 
+        // Format prompt with chat template for instruction-tuned models
+        let formatted_prompt = self.format_chat_prompt(prompt);
+
         // Tokenize prompt - use real tokenizer if available
-        let token_ids: Vec<u32> = self.tokenize(prompt)?;
+        let token_ids: Vec<u32> = self.tokenize(&formatted_prompt)?;
         let prompt_len = token_ids.len();
 
         let mut timing = GenerationTiming::default();
@@ -506,6 +557,11 @@ impl ShardLmClient {
         let logits = self.reconstruct_logits(&prefill_result.logits_client, &prefill_result.logits_server);
         let first_token = self.sample_token(&logits, temperature);
         generated_tokens.push(first_token);
+
+        // Stream first token
+        if let Ok(text) = self.detokenize(&[first_token]) {
+            on_token(&text);
+        }
 
         // Use configured EOS tokens
         let eos_token = self.eos_token_id;
@@ -544,6 +600,13 @@ impl ShardLmClient {
             let logits = self.reconstruct_logits(&decode_result.logits_client, &decode_result.logits_server);
             current_token = self.sample_token(&logits, temperature);
             generated_tokens.push(current_token);
+
+            // Stream current token (if not EOS)
+            if current_token != eos_token && current_token != eot_token {
+                if let Ok(text) = self.detokenize(&[current_token]) {
+                    on_token(&text);
+                }
+            }
         }
 
         timing.decode_ms = decode_start.elapsed().as_secs_f64() * 1000.0;

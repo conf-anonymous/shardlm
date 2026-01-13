@@ -280,11 +280,21 @@ async fn run_generate(
     if let Some(path) = tokenizer_path {
         client.load_tokenizer(path)?;
         println!("Loaded tokenizer from: {}", path);
+        if client.uses_chatml() {
+            println!("Detected ChatML format (Qwen)");
+        }
     }
 
-    match client.generate(prompt, max_tokens, temperature).await {
+    print!("{} ", style("Generated:").cyan().bold());
+    io::stdout().flush()?;
+
+    // Use streaming generation for real-time output
+    match client.generate_streaming(prompt, max_tokens, temperature, |token| {
+        print!("{}", token);
+        let _ = io::stdout().flush();
+    }).await {
         Ok(result) => {
-            println!("{} {}", style("Generated:").cyan().bold(), result.text);
+            println!(); // Newline after streaming output
 
             if show_timing {
                 println!();
@@ -294,9 +304,13 @@ async fn run_generate(
                 println!("  Decode:     {:>8.1} ms", result.timing.decode_ms);
                 println!("  Total:      {:>8.1} ms", result.timing.total_ms);
                 println!("  Tokens:     {}", result.timing.tokens_generated);
+                if result.timing.tokens_per_second > 0.0 {
+                    println!("  Speed:      {:.2} tok/s", result.timing.tokens_per_second);
+                }
             }
         }
         Err(e) => {
+            println!();
             println!("{} Generation failed: {}", style("[ERROR]").red().bold(), e);
             std::process::exit(1);
         }
@@ -365,6 +379,9 @@ async fn run_chat(server_url: &str, max_tokens: usize, temperature: f32, tokeniz
     if let Some(path) = tokenizer_path {
         client.load_tokenizer(path)?;
         println!("Loaded tokenizer from: {}", path);
+        if client.uses_chatml() {
+            println!("Detected ChatML format (Qwen)");
+        }
     }
 
     // Create session
@@ -397,17 +414,26 @@ async fn run_chat(server_url: &str, max_tokens: usize, temperature: f32, tokeniz
             break;
         }
 
-        match client.generate(input, max_tokens, temperature).await {
+        print!("{} ", style("Assistant:").blue().bold());
+        io::stdout().flush()?;
+
+        // Use streaming generation for real-time output
+        match client.generate_streaming(input, max_tokens, temperature, |token| {
+            print!("{}", token);
+            let _ = io::stdout().flush();
+        }).await {
             Ok(result) => {
-                println!("{} {}", style("Assistant:").blue().bold(), result.text);
+                println!();
                 println!(
-                    "  {} ({}ms)",
+                    "  {} ({}ms, {:.1} tok/s)",
                     style(format!("[{} tokens]", result.timing.tokens_generated)).dim(),
-                    result.timing.total_ms as u64
+                    result.timing.total_ms as u64,
+                    result.timing.tokens_per_second
                 );
                 println!();
             }
             Err(e) => {
+                println!();
                 println!("{} {}", style("[Error]").red().bold(), e);
             }
         }
