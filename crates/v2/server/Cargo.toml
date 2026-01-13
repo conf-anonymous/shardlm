@@ -1,0 +1,70 @@
+[package]
+name = "shardlm-v2-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "ShardLM v2 Server - GPU-accelerated Llama 70B inference API"
+
+[[bin]]
+name = "shardlm-v2-server"
+path = "src/main.rs"
+
+[features]
+default = []
+cuda = ["shardlm-v2-model/cuda", "shardlm-v2-core/cuda", "shardlm-v2-sharing/cuda"]
+binary-protocol = ["bincode"]
+mpc-secure = []
+h100-cc = ["cuda", "shardlm-v2-cc"]
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["macros", "ws"] }
+tokio = { workspace = true }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "timeout", "compression-zstd", "decompression-zstd"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+bincode = { version = "1.3", optional = true }
+bytes = "1.5"
+
+# Session management
+uuid = { version = "1.6", features = ["v4", "serde"] }
+dashmap = "5.5"
+parking_lot = "0.12"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = "1.0"
+
+# Random number generation
+rand = "0.8"
+rand_chacha = "0.3"
+
+# Async streams
+futures = "0.3"
+
+# Lazy initialization
+once_cell = "1.19"
+
+# ShardLM v2 crates
+shardlm-v2-core = { path = "../core" }
+shardlm-v2-model = { path = "../model" }
+shardlm-v2-sharing = { path = "../sharing" }
+shardlm-v2-cc = { path = "../cc", optional = true }
+
+# Half-precision types
+half = "2.3"
+
+[dev-dependencies]
+reqwest = { version = "0.11", features = ["json"] }
+tokio-test = "0.4"

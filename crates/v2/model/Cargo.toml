@@ -1,0 +1,42 @@
+[package]
+name = "shardlm-v2-model"
+version.workspace = true
+edition.workspace = true
+description = "ShardLM v2 Model - Llama 70B model loading and inference"
+
+[features]
+default = ["cpu"]
+cuda = ["dep:cudarc", "shardlm-v2-core/cuda", "shardlm-v2-sharing/cuda"]
+cpu = []
+
+[dependencies]
+shardlm-v2-core = { path = "../core", default-features = false }
+shardlm-v2-sharing = { path = "../sharing", default-features = false }
+rand.workspace = true
+
+# Model loading
+safetensors.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+
+# Tokenization
+tokenizers.workspace = true
+
+# GPU support
+cudarc = { version = "0.12", optional = true, features = ["cuda-version-from-build-system"] }
+half = "2.4"
+
+# Async
+tokio = { workspace = true, features = ["full"] }
+
+# Error handling
+thiserror.workspace = true
+
+# Logging
+tracing = "0.1"
+
+# Memory mapping for large models
+memmap2 = "0.9"
+
+[dev-dependencies]
+proptest.workspace = true

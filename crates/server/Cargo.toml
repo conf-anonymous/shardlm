@@ -1,0 +1,50 @@
+[package]
+name = "shardlm-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "ShardLM Server - Privacy-preserving LLM inference API"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["macros"] }
+tokio = { workspace = true }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "timeout", "compression-zstd", "decompression-zstd"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+bytes = "1.5"
+
+# Session management
+uuid = { version = "1.6", features = ["v4", "serde"] }
+dashmap = "5.5"
+parking_lot = "0.12"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = "1.0"
+
+# Random number generation
+rand = "0.8"
+rand_chacha.workspace = true
+
+# ShardLM crates
+shardlm-protocol = { path = "../protocol" }
+shardlm-ot = { path = "../ot" }
+shardlm-model = { path = "../model" }
+shardlm-fixed-point = { path = "../fixed_point" }
+shardlm-sharing = { path = "../sharing" }
+
+[dev-dependencies]
+reqwest = { version = "0.11", features = ["json"] }
+tokio-test = "0.4"

@@ -1,0 +1,46 @@
+{
+  "model": "Qwen2_5_1_5B",
+  "gpu": "Unknown GPU",
+  "version": "v3-mpc",
+  "endpoint": "/v3/mpc/prefill",
+  "timestamp": "2026-01-10T21:44:48.642537762Z",
+  "config": {
+    "prompt": "Explain the concept of machine learning in simple terms.",
+    "prompt_tokens": 56,
+    "max_new_tokens": 50,
+    "temperature": 0.7,
+    "runs": 10,
+    "warmup": 2,
+    "endpoint": "v3-mpc"
+  },
+  "results": {
+    "embedding": {
+      "mean_ms": 21.489057199999998,
+      "std_ms": 2.174916467414912,
+      "min_ms": 18.353931,
+      "max_ms": 25.486696,
+      "p50_ms": 22.493721,
+      "p95_ms": 25.486696,
+      "p99_ms": 25.486696
+    },
+    "prefill": {
+      "mean_ms": 1232.319848,
+      "std_ms": 88.4426821272416,
+      "min_ms": 1058.843044,
+      "max_ms": 1312.809629,
+      "p50_ms": 1278.755165,
+      "p95_ms": 1312.809629,
+      "p99_ms": 1312.809629
+    },
+    "total": {
+      "mean_ms": 1253.8097217999998,
+      "std_ms": 90.15671110488917,
+      "min_ms": 1077.48412,
+      "max_ms": 1335.39583,
+      "p50_ms": 1300.364338,
+      "p95_ms": 1335.39583,
+      "p99_ms": 1335.39583
+    },
+    "tokens_per_second": 45.44274775001432
+  }
+}

@@ -1,0 +1,31 @@
+[package]
+name = "shardlm-v2-sharing"
+version.workspace = true
+edition.workspace = true
+description = "ShardLM v2 Secret Sharing - CUDA-accelerated sharing for Llama 70B"
+
+[features]
+default = ["cpu"]
+cuda = ["dep:cudarc", "shardlm-v2-core/cuda"]
+cpu = []
+
+[dependencies]
+shardlm-v2-core = { path = "../core", default-features = false }
+rand.workspace = true
+rand_chacha.workspace = true
+thiserror.workspace = true
+zeroize.workspace = true
+rayon = "1.10"
+
+# CUDA support
+cudarc = { version = "0.12", optional = true, features = ["cuda-version-from-build-system"] }
+half = "2.4"
+
+# Async
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+# Logging
+tracing = "0.1"
+
+[dev-dependencies]
+proptest.workspace = true

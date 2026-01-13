@@ -1,0 +1,71 @@
+{
+  "model": "Qwen2_5_14B",
+  "gpu": "2x NVIDIA H100 80GB HBM3",
+  "version": "v3-ot",
+  "timestamp": "2026-01-11T00:30:00Z",
+  "status": "partial_success",
+  "config": {
+    "model_parameters": "14B",
+    "hidden_dim": 5120,
+    "num_layers": 48,
+    "num_heads": 40,
+    "num_kv_heads": 8,
+    "num_gpus": 2,
+    "max_seq_len": 2048
+  },
+  "accomplished": {
+    "model_download": true,
+    "model_loading": true,
+    "multi_gpu_build": true,
+    "secure_weights_distribution": true,
+    "server_startup": true,
+    "v3_ot_config_validation": true
+  },
+  "ot_config": {
+    "table_size": 4096,
+    "total_memory_kb": 48.0,
+    "security_level": "1-of-N Oblivious Transfer (information-theoretic against server)",
+    "overhead_constant": true,
+    "notes": "V3-OT maintains constant 48KB overhead regardless of model size (validated at 1.5B, 7B, 14B)"
+  },
+  "memory_usage": {
+    "gpu_0": {
+      "used_gb": 68.4,
+      "total_gb": 79.6,
+      "utilization_percent": 86
+    },
+    "gpu_1": {
+      "used_gb": 65.4,
+      "total_gb": 79.6,
+      "utilization_percent": 82
+    }
+  },
+  "remaining_work": {
+    "multi_gpu_inference": {
+      "description": "Update batched_prefill_gpu_v3 to handle distributed secure weights",
+      "files": ["crates/v2/server/src/routes/secure_inference.rs"],
+      "changes_needed": [
+        "Create device handles for each GPU",
+        "Look up layer GPU via gpu_weights.layer_gpu_id(layer_idx)",
+        "Move tensors to correct GPU before each layer",
+        "Or implement tensor parallelism for cross-GPU operations"
+      ]
+    }
+  },
+  "scaling_validation": {
+    "model_sizes_tested": ["1.5B", "7B", "14B"],
+    "ot_overhead_constant": true,
+    "overhead_kb": 48,
+    "notes": "V3-OT overhead remains constant at 48KB across all model sizes, validating the theoretical O(1) overhead claim"
+  },
+  "fix_applied": {
+    "file": "crates/v2/server/src/secure_weights.rs",
+    "description": "Distributed GPU secure weights across GPUs to prevent OOM",
+    "changes": [
+      "Added layer_gpu_ids field to GpuSecureModelWeights",
+      "Added num_gpus field to GpuSecureModelWeights",
+      "Modified from_gpu_weights to distribute layers across GPUs",
+      "Added layer_gpu_id() helper method"
+    ]
+  }
+}

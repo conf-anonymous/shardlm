@@ -1,0 +1,15 @@
+[package]
+name = "shardlm-sharing"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+shardlm-fixed-point = { path = "../fixed_point" }
+rand.workspace = true
+rand_chacha.workspace = true
+thiserror.workspace = true
+zeroize.workspace = true
+rayon = "1.10"
+
+[dev-dependencies]
+proptest.workspace = true

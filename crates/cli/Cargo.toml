@@ -1,0 +1,17 @@
+[package]
+name = "shardlm-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "shardlm"
+path = "src/main.rs"
+
+[dependencies]
+shardlm-protocol = { path = "../protocol" }
+shardlm-fixed-point = { path = "../fixed_point" }
+shardlm-sharing = { path = "../sharing" }
+shardlm-ot = { path = "../ot" }
+shardlm-model = { path = "../model" }
+shardlm-harness = { path = "../harness" }
+thiserror.workspace = true

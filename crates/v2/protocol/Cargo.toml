@@ -1,0 +1,15 @@
+[package]
+name = "shardlm-v2-protocol"
+version.workspace = true
+edition.workspace = true
+description = "ShardLM v2 Protocol - Extended protocol for 128K context and Llama 70B"
+
+[dependencies]
+shardlm-v2-core = { path = "../core" }
+byteorder.workspace = true
+crc32fast.workspace = true
+thiserror.workspace = true
+serde = { workspace = true, features = ["derive"] }
+
+[dev-dependencies]
+proptest.workspace = true

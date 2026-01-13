@@ -1,0 +1,18 @@
+[package]
+name = "shardlm-harness"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+shardlm-protocol = { path = "../protocol" }
+shardlm-fixed-point = { path = "../fixed_point" }
+shardlm-sharing = { path = "../sharing" }
+shardlm-ot = { path = "../ot" }
+shardlm-model = { path = "../model" }
+rand.workspace = true
+rand_chacha.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

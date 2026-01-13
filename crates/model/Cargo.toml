@@ -1,0 +1,17 @@
+[package]
+name = "shardlm-model"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+shardlm-fixed-point = { path = "../fixed_point" }
+shardlm-sharing = { path = "../sharing" }
+safetensors.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+rand.workspace = true
+tokenizers.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

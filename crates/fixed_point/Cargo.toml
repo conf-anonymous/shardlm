@@ -1,0 +1,10 @@
+[package]
+name = "shardlm-fixed-point"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

@@ -1,0 +1,45 @@
+{
+  "model": "Qwen2_5_1_5B",
+  "gpu": "Unknown GPU",
+  "version": "v3-cc",
+  "endpoint": "/v2/secure/gpu/prefill_v3-cc",
+  "timestamp": "2026-01-10T20:39:06.641858413Z",
+  "config": {
+    "prompt": "Hello, how are you today?",
+    "prompt_tokens": 25,
+    "max_new_tokens": 50,
+    "temperature": 0.7,
+    "runs": 10,
+    "warmup": 2,
+    "endpoint": "v3-cc"
+  },
+  "results": {
+    "embedding": {
+      "mean_ms": 10.191408599999999,
+      "std_ms": 1.6190628045665925,
+      "min_ms": 7.425275,
+      "max_ms": 13.555651000000001,
+      "p50_ms": 10.593233,
+      "p95_ms": 13.555651000000001,
+      "p99_ms": 13.555651000000001
+    },
+    "prefill": {
+      "mean_ms": 534.0087853,
+      "std_ms": 37.65093543530227,
+      "min_ms": 478.581154,
+      "max_ms": 567.182038,
+      "p50_ms": 564.011218,
+      "p95_ms": 567.182038,
+      "p99_ms": 567.182038
+    },
+    "total": {
+      "mean_ms": 544.2009909000001,
+      "std_ms": 37.5976524307767,
+      "min_ms": 489.087744,
+      "max_ms": 576.769348,
+      "p50_ms": 572.2714199999999,
+      "p95_ms": 576.769348,
+      "p99_ms": 576.769348
+    }
+  }
+}

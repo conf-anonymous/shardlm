@@ -1,0 +1,13 @@
+[package]
+name = "shardlm-protocol"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+byteorder.workspace = true
+crc32fast.workspace = true
+thiserror.workspace = true
+rand.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

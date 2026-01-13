@@ -1,0 +1,45 @@
+[package]
+name = "shardlm-v2-cc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "H100 Confidential Computing integration for ShardLM"
+
+[features]
+default = []
+# Enable NVIDIA CC SDK (requires SDK installation)
+nvidia-cc = []
+# Software fallback (AES-GCM encryption on GPU)
+software-cc = ["dep:aes-gcm"]
+
+[dependencies]
+# Core CUDA support
+cudarc = { workspace = true }
+
+# Encryption for software fallback
+aes-gcm = { version = "0.10", optional = true }
+
+# Hashing for attestation
+sha2 = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = "1.0"
+
+# Random
+rand = { workspace = true }
+
+# Logging
+tracing = "0.1"
+
+# Async
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+tokio-test = "0.4"

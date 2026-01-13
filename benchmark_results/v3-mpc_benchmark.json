@@ -1,0 +1,46 @@
+{
+  "model": "Qwen2_5_1_5B",
+  "gpu": "Unknown GPU",
+  "version": "v3-mpc",
+  "endpoint": "/v3/mpc/prefill",
+  "timestamp": "2026-01-10T20:58:00.453965714Z",
+  "config": {
+    "prompt": "The quick brown fox jumps over the lazy dog. This is a longer prompt to better measure throughput.",
+    "prompt_tokens": 98,
+    "max_new_tokens": 50,
+    "temperature": 0.7,
+    "runs": 15,
+    "warmup": 3,
+    "endpoint": "v3-mpc"
+  },
+  "results": {
+    "embedding": {
+      "mean_ms": 29.908642599999997,
+      "std_ms": 3.9762293756557665,
+      "min_ms": 25.594203,
+      "max_ms": 42.350151000000004,
+      "p50_ms": 29.133608,
+      "p95_ms": 32.979915999999996,
+      "p99_ms": 42.350151000000004
+    },
+    "prefill": {
+      "mean_ms": 2116.1792459999997,
+      "std_ms": 127.00772813738742,
+      "min_ms": 2040.580694,
+      "max_ms": 2586.242766,
+      "p50_ms": 2087.999295,
+      "p95_ms": 2110.412787,
+      "p99_ms": 2586.242766
+    },
+    "total": {
+      "mean_ms": 2146.0886902,
+      "std_ms": 127.67895136332977,
+      "min_ms": 2066.611118,
+      "max_ms": 2617.723288,
+      "p50_ms": 2120.875739,
+      "p95_ms": 2139.713005,
+      "p99_ms": 2617.723288
+    },
+    "tokens_per_second": 46.309876720150015
+  }
+}

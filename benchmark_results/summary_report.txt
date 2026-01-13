@@ -1,0 +1,57 @@
+================================================================================
+                    SHARDLM V3 GOLD STANDARD BENCHMARK REPORT
+================================================================================
+
+Benchmark Date: Sat Jan 10 20:58:00 UTC 2026
+
+PERFORMANCE COMPARISON TABLE
+--------------------------------------------------------------------------------
+Variant      | Prefill(ms)  | Total(ms)    | Tokens/sec   | P95(ms)      | vs V2     
+--------------------------------------------------------------------------------
+v2           | 2872.4       | 2907.3       | 34.1         | 3200.7       | -         
+v3           | 2219.6       | 2248.6       | 44.2         | 2533.2       | 29.4%     
+v3-cc        | 2173.1       | 2203.0       | 45.1         | 2540.3       | 32.2%     
+v3-mpc       | 2116.2       | 2146.1       | 46.3         | 2110.4       | 35.7%     
+--------------------------------------------------------------------------------
+
+DETAILED STATISTICS
+--------------------------------------------------------------------------------
+
+[v2]
+  Prompt tokens: 98
+  Tokens/second: 34.1
+  Prefill:  mean=2872.4ms, std=288.3ms, min=2550.2ms, max=3512.9ms
+  Prefill:  P50=2713.9ms, P95=3200.7ms, P99=3512.9ms
+  Total:    mean=2907.3ms, std=289.1ms
+
+[v3]
+  Prompt tokens: 98
+  Tokens/second: 44.2
+  Prefill:  mean=2219.6ms, std=252.4ms, min=1963.9ms, max=2764.0ms
+  Prefill:  P50=2154.7ms, P95=2533.2ms, P99=2764.0ms
+  Total:    mean=2248.6ms, std=255.0ms
+
+[v3-cc]
+  Prompt tokens: 98
+  Tokens/second: 45.1
+  Prefill:  mean=2173.1ms, std=157.4ms, min=2053.2ms, max=2559.9ms
+  Prefill:  P50=2107.8ms, P95=2540.3ms, P99=2559.9ms
+  Total:    mean=2203.0ms, std=158.8ms
+
+[v3-mpc]
+  Prompt tokens: 98
+  Tokens/second: 46.3
+  Prefill:  mean=2116.2ms, std=127.0ms, min=2040.6ms, max=2586.2ms
+  Prefill:  P50=2088.0ms, P95=2110.4ms, P99=2586.2ms
+  Total:    mean=2146.1ms, std=127.7ms
+
+--------------------------------------------------------------------------------
+SECURITY COMPARISON
+--------------------------------------------------------------------------------
+
+V2:     Reconstructs plaintext for nonlinear ops (RMSNorm, SiLU, Softmax)
+V3:     Same as V2, optimized GPU transfers (tensors stay on GPU)
+V3-CC:  H100 Confidential Computing (hardware memory encryption + attestation)
+V3-MPC: Beaver triple-based MPC (NO plaintext reconstruction, ~0.5-2% accuracy loss)
+
+=================================================================================
