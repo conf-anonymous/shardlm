@@ -92,15 +92,41 @@ cargo build -p shardlm-v2-client --release
 # Get server info (model, GPU, dimensions)
 ./target/release/shardlm-v2-client info -s http://localhost:9090
 
-# Generate text
-./target/release/shardlm-v2-client generate -s http://localhost:9090 -p "Hello, how are you?"
-
-# Generate with options
+# Generate text with streaming output (requires tokenizer for proper decoding)
 ./target/release/shardlm-v2-client generate -s http://localhost:9090 \
-  -p "Explain quantum computing" --max-tokens 100 --temperature 0.7 --timing
+  -p "Hello!" \
+  --max-tokens 50 \
+  --timing \
+  --tokenizer ./qwen2.5-1.5b-instruct-weights/tokenizer.json
 
-# Interactive chat
-./target/release/shardlm-v2-client chat -s http://localhost:9090
+# Interactive chat mode
+./target/release/shardlm-v2-client chat -s http://localhost:9090 \
+  --tokenizer ./qwen2.5-1.5b-instruct-weights/tokenizer.json
+```
+
+**Important**: The `--tokenizer` flag is required for proper text encoding/decoding. Without it, the client falls back to ASCII-based tokenization which produces garbled output. The tokenizer file is included in the model weights directory.
+
+#### Example Output
+
+```
+$ ./target/release/shardlm-v2-client generate -s http://localhost:9090 \
+    -p "Hello!" --max-tokens 20 --timing \
+    --tokenizer ./qwen2.5-1.5b-instruct-weights/tokenizer.json
+
+Generating from: "Hello!"
+Server: http://localhost:9090
+
+Loaded tokenizer from: ./qwen2.5-1.5b-instruct-weights/tokenizer.json
+Detected ChatML format (Qwen)
+Generated: Hello! How can I assist you today?
+
+Timing:
+  Embedding:      44.9 ms
+  Prefill:       376.9 ms
+  Decode:        836.0 ms
+  Total:        1257.8 ms
+  Tokens:     10
+  Speed:      11.96 tok/s
 ```
 
 #### Benchmarking
@@ -117,6 +143,8 @@ cargo build -p shardlm-v2-client --release
 ./target/release/shardlm-v2-client benchmark -s http://localhost:9090 \
   --runs 10 --warmup 2 --endpoint v3-ot --output results.json
 ```
+
+See [docs/RUNNING_EACH_VERSION.md](docs/RUNNING_EACH_VERSION.md) for detailed instructions on running each protocol version.
 
 ## Architecture
 
@@ -530,6 +558,7 @@ ShardLM is designed to work with any open-weights transformer model. The archite
 
 ## Documentation
 
+- [RUNNING_EACH_VERSION.md](docs/RUNNING_EACH_VERSION.md) - **Step-by-step tutorial for running each protocol version**
 - [V3_REFERENCE_IMPLEMENTATION.md](docs/V3_REFERENCE_IMPLEMENTATION.md) - Comprehensive V3 technical documentation
 - [V2_SECURE_INFERENCE_SPEC.md](docs/V2_SECURE_INFERENCE_SPEC.md) - V2 secure inference specification
 - [V2_SECURITY_MODEL.md](docs/V2_SECURITY_MODEL.md) - Security model and threat analysis
