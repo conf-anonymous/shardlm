@@ -42,6 +42,7 @@ pub use session::{ModelInfo, ServerInfo, SessionInfo};
 
 use inference::{
     BatchedPrefillRequest, BatchedPrefillResponse, DirectEmbeddingRequest, DirectEmbeddingResponse,
+    GenerateTokenRequest, GenerateTokenResponse,
 };
 use rand::Rng;
 use session::CreateSessionRequest;
@@ -349,6 +350,47 @@ impl ShardLmClient {
         Ok(prefill_response)
     }
 
+    /// Decode a single token (autoregressive step)
+    ///
+    /// This takes the embedding of the previously sampled token, the current KV cache,
+    /// and returns the logits for the next token plus updates to the KV cache.
+    pub async fn decode_token(
+        &self,
+        hidden_client: &[f32],
+        hidden_server: &[f32],
+        k_cache: &[Vec<Vec<f32>>],
+        v_cache: &[Vec<Vec<f32>>],
+        position: usize,
+    ) -> Result<GenerateTokenResponse> {
+        let session_id = self
+            .session_id
+            .as_ref()
+            .ok_or(ClientError::NoSession)?
+            .clone();
+
+        let url = format!("{}/v2/secure/gpu/generate/token", self.server_url);
+        let request = GenerateTokenRequest {
+            session_id,
+            hidden_client: hidden_client.to_vec(),
+            hidden_server: hidden_server.to_vec(),
+            k_cache: k_cache.to_vec(),
+            v_cache: v_cache.to_vec(),
+            position,
+        };
+
+        let resp = self.http.post(&url).json(&request).send().await?;
+
+        if !resp.status().is_success() {
+            return Err(ClientError::Server {
+                status: resp.status().as_u16(),
+                message: resp.text().await.unwrap_or_default(),
+            });
+        }
+
+        let response: GenerateTokenResponse = resp.json().await?;
+        Ok(response)
+    }
+
     /// Sample token from logits using temperature sampling
     fn sample_token(&self, logits: &[f32], temperature: f32) -> u32 {
         if temperature <= 0.0 {
@@ -406,11 +448,12 @@ impl ShardLmClient {
         // For now, we use a simple word-based tokenization as placeholder
         // In production, we'd use the actual tokenizer from the server
         let token_ids: Vec<u32> = self.simple_tokenize(prompt);
+        let prompt_len = token_ids.len();
 
         let mut timing = GenerationTiming::default();
         let start = Instant::now();
 
-        // Step 1: Fetch embeddings
+        // Step 1: Fetch embeddings for prompt
         let embed_start = Instant::now();
         let embeddings = self.fetch_embeddings(&token_ids).await?;
         timing.embedding_ms = embed_start.elapsed().as_secs_f64() * 1000.0;
@@ -429,20 +472,50 @@ impl ShardLmClient {
         let first_token = self.sample_token(&logits, temperature);
         generated_tokens.push(first_token);
 
-        // Check for EOS token (for Qwen: 151645)
+        // EOS tokens for Qwen 2.5
         const EOS_TOKEN: u32 = 151645;
+        const EOT_TOKEN: u32 = 151643;
 
-        if first_token != EOS_TOKEN && generated_tokens.len() < max_tokens {
-            // For now, we only do prefill. Full autoregressive decode
-            // would require additional server endpoints for KV cache updates.
-            // This is sufficient for benchmarking prefill performance.
+        // Initialize KV cache from prefill
+        let mut k_cache = prefill_result.k_cache;
+        let mut v_cache = prefill_result.v_cache;
+
+        // Continue generating if we haven't hit EOS and have tokens left
+        let mut current_token = first_token;
+        while current_token != EOS_TOKEN
+            && current_token != EOT_TOKEN
+            && generated_tokens.len() < max_tokens
+        {
+            // Get embedding for the new token
+            let token_embedding = self.fetch_embeddings(&[current_token]).await?;
+
+            // Decode step: process one token through all layers
+            let position = prompt_len + generated_tokens.len() - 1;
+            let decode_result = self.decode_token(
+                &token_embedding.client[0],
+                &token_embedding.server[0],
+                &k_cache,
+                &v_cache,
+                position,
+            ).await?;
+
+            // Update KV cache by appending new K/V vectors
+            for (layer_idx, (new_k, new_v)) in decode_result.new_k.iter().zip(decode_result.new_v.iter()).enumerate() {
+                k_cache[layer_idx].push(new_k.clone());
+                v_cache[layer_idx].push(new_v.clone());
+            }
+
+            // Sample next token
+            let logits = self.reconstruct_logits(&decode_result.logits_client, &decode_result.logits_server);
+            current_token = self.sample_token(&logits, temperature);
+            generated_tokens.push(current_token);
         }
 
         timing.decode_ms = decode_start.elapsed().as_secs_f64() * 1000.0;
         timing.total_ms = start.elapsed().as_secs_f64() * 1000.0;
         timing.tokens_generated = generated_tokens.len();
-        timing.tokens_per_second = if timing.total_ms > 0.0 {
-            (timing.tokens_generated as f64) / (timing.total_ms / 1000.0)
+        timing.tokens_per_second = if timing.decode_ms > 0.0 {
+            (timing.tokens_generated as f64) / (timing.decode_ms / 1000.0)
         } else {
             0.0
         };

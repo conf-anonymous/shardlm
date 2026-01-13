@@ -70,9 +70,10 @@ pub struct GenerateTokenResponse {
     /// Updated hidden state
     pub hidden_client: Vec<f32>,
     pub hidden_server: Vec<f32>,
-    /// Updated KV cache
-    pub k_cache: Vec<Vec<Vec<f32>>>,
-    pub v_cache: Vec<Vec<Vec<f32>>>,
+    /// New K vectors for each layer (to append to cache)
+    pub new_k: Vec<Vec<f32>>,
+    /// New V vectors for each layer (to append to cache)
+    pub new_v: Vec<Vec<f32>>,
     /// Logits for sampling
     pub logits_client: Vec<f32>,
     pub logits_server: Vec<f32>,
