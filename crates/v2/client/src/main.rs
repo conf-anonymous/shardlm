@@ -21,7 +21,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use console::style;
-use shardlm_v2_client::{BenchmarkConfig, BenchmarkRunner, ShardLmClient};
+use shardlm_v2_client::{BenchmarkConfig, BenchmarkRunner, Endpoint, ShardLmClient};
 use std::io::{self, Write};
 
 #[derive(Parser)]
@@ -94,6 +94,10 @@ enum Commands {
         /// Path to tokenizer.json file (from model directory)
         #[arg(long)]
         tokenizer: Option<String>,
+
+        /// Protocol endpoint version (v2, v3, v3-cc, v3-mpc, v3-ot)
+        #[arg(short, long, default_value = "v2")]
+        endpoint: String,
     },
 
     /// Run performance benchmarks
@@ -148,6 +152,10 @@ enum Commands {
         /// Path to tokenizer.json file (from model directory)
         #[arg(long)]
         tokenizer: Option<String>,
+
+        /// Protocol endpoint version (v2, v3, v3-cc, v3-mpc, v3-ot)
+        #[arg(short, long, default_value = "v2")]
+        endpoint: String,
     },
 }
 
@@ -177,8 +185,9 @@ async fn main() -> Result<()> {
             temperature,
             timing,
             tokenizer,
+            endpoint,
         } => {
-            run_generate(&server_url, &prompt, max_tokens, temperature, timing, tokenizer.as_deref()).await?;
+            run_generate(&server_url, &prompt, max_tokens, temperature, timing, tokenizer.as_deref(), &endpoint).await?;
         }
         Commands::Benchmark {
             server_url,
@@ -207,8 +216,9 @@ async fn main() -> Result<()> {
             max_tokens,
             temperature,
             tokenizer,
+            endpoint,
         } => {
-            run_chat(&server_url, max_tokens, temperature, tokenizer.as_deref()).await?;
+            run_chat(&server_url, max_tokens, temperature, tokenizer.as_deref(), &endpoint).await?;
         }
     }
 
@@ -269,9 +279,14 @@ async fn run_generate(
     temperature: f32,
     show_timing: bool,
     tokenizer_path: Option<&str>,
+    endpoint_str: &str,
 ) -> Result<()> {
+    // Parse endpoint
+    let endpoint: Endpoint = endpoint_str.parse().map_err(|e| anyhow::anyhow!("{}", e))?;
+
     println!("Generating from: \"{}\"", prompt);
     println!("Server: {}", server_url);
+    println!("Endpoint: {}", endpoint);
     println!();
 
     let mut client = ShardLmClient::new(server_url);
@@ -288,8 +303,8 @@ async fn run_generate(
     print!("{} ", style("Generated:").cyan().bold());
     io::stdout().flush()?;
 
-    // Use streaming generation for real-time output
-    match client.generate_streaming(prompt, max_tokens, temperature, |token| {
+    // Use streaming generation for real-time output with specified endpoint
+    match client.generate_streaming_with_endpoint(prompt, max_tokens, temperature, endpoint, |token| {
         print!("{}", token);
         let _ = io::stdout().flush();
     }).await {
@@ -369,9 +384,13 @@ async fn run_benchmark(
     Ok(())
 }
 
-async fn run_chat(server_url: &str, max_tokens: usize, temperature: f32, tokenizer_path: Option<&str>) -> Result<()> {
+async fn run_chat(server_url: &str, max_tokens: usize, temperature: f32, tokenizer_path: Option<&str>, endpoint_str: &str) -> Result<()> {
+    // Parse endpoint
+    let endpoint: Endpoint = endpoint_str.parse().map_err(|e| anyhow::anyhow!("{}", e))?;
+
     println!("{}", style("ShardLM V2 Interactive Chat").cyan().bold());
-    println!("Type 'quit' or 'exit' to end the session.\n");
+    println!("Type 'quit' or 'exit' to end the session.");
+    println!("Endpoint: {}\n", endpoint);
 
     let mut client = ShardLmClient::new(server_url);
 
@@ -417,8 +436,8 @@ async fn run_chat(server_url: &str, max_tokens: usize, temperature: f32, tokeniz
         print!("{} ", style("Assistant:").blue().bold());
         io::stdout().flush()?;
 
-        // Use streaming generation for real-time output
-        match client.generate_streaming(input, max_tokens, temperature, |token| {
+        // Use streaming generation for real-time output with specified endpoint
+        match client.generate_streaming_with_endpoint(input, max_tokens, temperature, endpoint, |token| {
             print!("{}", token);
             let _ = io::stdout().flush();
         }).await {

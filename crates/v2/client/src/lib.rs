@@ -40,6 +40,52 @@ pub use error::{ClientError, Result};
 pub use inference::{EmbeddingShares, GenerationResult, GenerationTiming};
 pub use session::{ModelInfo, ServerInfo, SessionInfo};
 
+/// Protocol endpoint version for inference
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Endpoint {
+    /// V2: GPU-accelerated secret sharing with server-side reconstruction
+    #[default]
+    V2,
+    /// V3: Optimized secret sharing with minimal GPU transfers
+    V3,
+    /// V3-CC: H100 Confidential Computing (hardware TEE)
+    V3Cc,
+    /// V3-MPC: Beaver triple-based MPC
+    V3Mpc,
+    /// V3-OT: Oblivious Transfer for nonlinear operations
+    V3Ot,
+}
+
+impl std::fmt::Display for Endpoint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Endpoint::V2 => write!(f, "v2"),
+            Endpoint::V3 => write!(f, "v3"),
+            Endpoint::V3Cc => write!(f, "v3-cc"),
+            Endpoint::V3Mpc => write!(f, "v3-mpc"),
+            Endpoint::V3Ot => write!(f, "v3-ot"),
+        }
+    }
+}
+
+impl std::str::FromStr for Endpoint {
+    type Err = ClientError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "v2" => Ok(Endpoint::V2),
+            "v3" => Ok(Endpoint::V3),
+            "v3-cc" | "v3cc" => Ok(Endpoint::V3Cc),
+            "v3-mpc" | "v3mpc" => Ok(Endpoint::V3Mpc),
+            "v3-ot" | "v3ot" => Ok(Endpoint::V3Ot),
+            _ => Err(ClientError::InvalidArgument(format!(
+                "Unknown endpoint '{}'. Valid options: v2, v3, v3-cc, v3-mpc, v3-ot",
+                s
+            ))),
+        }
+    }
+}
+
 use inference::{
     BatchedPrefillRequest, BatchedPrefillResponse, DirectEmbeddingRequest, DirectEmbeddingResponse,
     GenerateTokenRequest, GenerateTokenResponse,
@@ -519,6 +565,23 @@ impl ShardLmClient {
         prompt: &str,
         max_tokens: usize,
         temperature: f32,
+        on_token: F,
+    ) -> Result<GenerationResult>
+    where
+        F: FnMut(&str),
+    {
+        self.generate_streaming_with_endpoint(prompt, max_tokens, temperature, Endpoint::V2, on_token).await
+    }
+
+    /// Generate with streaming output using a specific protocol endpoint
+    ///
+    /// Like `generate_streaming`, but allows specifying which protocol version to use.
+    pub async fn generate_streaming_with_endpoint<F>(
+        &mut self,
+        prompt: &str,
+        max_tokens: usize,
+        temperature: f32,
+        endpoint: Endpoint,
         mut on_token: F,
     ) -> Result<GenerationResult>
     where
@@ -544,9 +607,15 @@ impl ShardLmClient {
         let embeddings = self.fetch_embeddings(&token_ids).await?;
         timing.embedding_ms = embed_start.elapsed().as_secs_f64() * 1000.0;
 
-        // Step 2: Prefill (process all prompt tokens)
+        // Step 2: Prefill (process all prompt tokens) using the specified endpoint
         let prefill_start = Instant::now();
-        let prefill_result = self.prefill_v2(&embeddings.client, &embeddings.server).await?;
+        let prefill_result = match endpoint {
+            Endpoint::V2 => self.prefill_v2(&embeddings.client, &embeddings.server).await?,
+            Endpoint::V3 => self.prefill_v3(&embeddings.client, &embeddings.server).await?,
+            Endpoint::V3Cc => self.prefill_v3_cc(&embeddings.client, &embeddings.server).await?,
+            Endpoint::V3Mpc => self.prefill_v3_mpc(&embeddings.client, &embeddings.server).await?,
+            Endpoint::V3Ot => self.prefill_v3_ot(&embeddings.client, &embeddings.server).await?,
+        };
         timing.prefill_ms = prefill_start.elapsed().as_secs_f64() * 1000.0;
 
         // Step 3: Decode (generate tokens one at a time)

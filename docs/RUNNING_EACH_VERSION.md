@@ -18,12 +18,6 @@ Before running any version, ensure you have:
    python -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen2.5-1.5B-Instruct', local_dir='/workspace/qwen2.5-1.5b-instruct-weights')"
    ```
 
-3. **Set environment variables** (adjust paths as needed):
-   ```bash
-   export MODEL_DIR=/workspace/qwen2.5-1.5b-instruct-weights
-   export TOKENIZER=$MODEL_DIR/tokenizer.json
-   ```
-
 ## Version Overview
 
 | Version | Security Model | GPU Required | Use Case |
@@ -43,7 +37,7 @@ V2 uses additive secret sharing for linear operations with server-side reconstru
 ### Start the Server
 
 ```bash
-SHARDLM_V2_MODEL_DIR=$MODEL_DIR \
+SHARDLM_V2_MODEL_DIR=/workspace/qwen2.5-1.5b-instruct-weights \
 SHARDLM_V2_MODEL_ARCH=qwen2_5_1_5b \
 SHARDLM_V2_NUM_GPUS=1 \
 SHARDLM_V2_PORT=9090 \
@@ -58,13 +52,15 @@ SHARDLM_V2_PORT=9090 \
   -p "What is the capital of France?" \
   --max-tokens 30 \
   --timing \
-  --tokenizer $TOKENIZER
+  --endpoint v2 \
+  --tokenizer /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 ```
 
 **Expected Output:**
 ```
 Generating from: "What is the capital of France?"
 Server: http://localhost:9090
+Endpoint: v2
 
 Loaded tokenizer from: /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 Detected ChatML format (Qwen)
@@ -100,7 +96,7 @@ V3 minimizes GPU-to-CPU transfers by keeping intermediate states on the GPU. Sec
 Same as V2 (the server supports all V3 endpoints):
 
 ```bash
-SHARDLM_V2_MODEL_DIR=$MODEL_DIR \
+SHARDLM_V2_MODEL_DIR=/workspace/qwen2.5-1.5b-instruct-weights \
 SHARDLM_V2_MODEL_ARCH=qwen2_5_1_5b \
 SHARDLM_V2_NUM_GPUS=1 \
 SHARDLM_V2_PORT=9090 \
@@ -115,13 +111,15 @@ SHARDLM_V2_PORT=9090 \
   -p "Explain photosynthesis in simple terms." \
   --max-tokens 50 \
   --timing \
-  --tokenizer $TOKENIZER
+  --endpoint v3 \
+  --tokenizer /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 ```
 
 **Expected Output:**
 ```
 Generating from: "Explain photosynthesis in simple terms."
 Server: http://localhost:9090
+Endpoint: v3
 
 Loaded tokenizer from: /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 Detected ChatML format (Qwen)
@@ -160,7 +158,7 @@ V3-CC uses NVIDIA H100 Confidential Computing mode for hardware-encrypted GPU me
 ### Start the Server
 
 ```bash
-SHARDLM_V2_MODEL_DIR=$MODEL_DIR \
+SHARDLM_V2_MODEL_DIR=/workspace/qwen2.5-1.5b-instruct-weights \
 SHARDLM_V2_MODEL_ARCH=qwen2_5_1_5b \
 SHARDLM_V2_NUM_GPUS=1 \
 SHARDLM_V2_PORT=9090 \
@@ -188,15 +186,17 @@ curl -X POST http://localhost:9090/v3/cc/verify \
 ./target/release/shardlm-v2-client generate \
   -s http://localhost:9090 \
   -p "What are the security benefits of confidential computing?" \
-  --max-tokens 60 \
+  --max-tokens 250 \
   --timing \
-  --tokenizer $TOKENIZER
+  --endpoint v3-cc \
+  --tokenizer /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 ```
 
 **Expected Output:**
 ```
 Generating from: "What are the security benefits of confidential computing?"
 Server: http://localhost:9090
+Endpoint: v3-cc
 
 Loaded tokenizer from: /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 Detected ChatML format (Qwen)
@@ -233,7 +233,7 @@ V3-MPC uses Beaver triples for secure multiplication, ensuring the server never 
 ### Start the Server
 
 ```bash
-SHARDLM_V2_MODEL_DIR=$MODEL_DIR \
+SHARDLM_V2_MODEL_DIR=/workspace/qwen2.5-1.5b-instruct-weights \
 SHARDLM_V2_MODEL_ARCH=qwen2_5_1_5b \
 SHARDLM_V2_NUM_GPUS=1 \
 SHARDLM_V2_PORT=9090 \
@@ -246,15 +246,17 @@ SHARDLM_V2_PORT=9090 \
 ./target/release/shardlm-v2-client generate \
   -s http://localhost:9090 \
   -p "Write a haiku about privacy." \
-  --max-tokens 30 \
+  --max-tokens 250 \
   --timing \
-  --tokenizer $TOKENIZER
+  --endpoint v3-mpc \
+  --tokenizer /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 ```
 
 **Expected Output:**
 ```
 Generating from: "Write a haiku about privacy."
 Server: http://localhost:9090
+Endpoint: v3-mpc
 
 Loaded tokenizer from: /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 Detected ChatML format (Qwen)
@@ -290,7 +292,7 @@ V3-OT uses Oblivious Transfer for nonlinear operations via precomputed function 
 ### Start the Server
 
 ```bash
-SHARDLM_V2_MODEL_DIR=$MODEL_DIR \
+SHARDLM_V2_MODEL_DIR=/workspace/qwen2.5-1.5b-instruct-weights \
 SHARDLM_V2_MODEL_ARCH=qwen2_5_1_5b \
 SHARDLM_V2_NUM_GPUS=1 \
 SHARDLM_V2_PORT=9090 \
@@ -308,16 +310,18 @@ curl -s http://localhost:9090/v3/ot/info | jq .
 ```bash
 ./target/release/shardlm-v2-client generate \
   -s http://localhost:9090 \
-  -p "Explain oblivious transfer in one sentence." \
-  --max-tokens 40 \
+  -p "Explain oblivious transfer in two sentences." \
+  --max-tokens 250 \
   --timing \
-  --tokenizer $TOKENIZER
+  --endpoint v3-ot \
+  --tokenizer /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 ```
 
 **Expected Output:**
 ```
-Generating from: "Explain oblivious transfer in one sentence."
+Generating from: "Explain oblivious transfer in two sentences."
 Server: http://localhost:9090
+Endpoint: v3-ot
 
 Loaded tokenizer from: /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 Detected ChatML format (Qwen)
@@ -347,19 +351,29 @@ Timing:
 
 ## Interactive Chat Mode
 
-All versions support interactive chat. Use the `--tokenizer` flag for proper text handling:
+All versions support interactive chat. Use `--endpoint` to select the protocol version:
 
 ```bash
+# Chat using V2 (default)
 ./target/release/shardlm-v2-client chat \
   -s http://localhost:9090 \
   --max-tokens 100 \
-  --tokenizer $TOKENIZER
+  --endpoint v2 \
+  --tokenizer /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
+
+# Chat using V3-OT (full cryptographic security)
+./target/release/shardlm-v2-client chat \
+  -s http://localhost:9090 \
+  --max-tokens 100 \
+  --endpoint v3-ot \
+  --tokenizer /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 ```
 
-**Example Session:**
+**Example Session (V3-OT):**
 ```
 ShardLM V2 Interactive Chat
 Type 'quit' or 'exit' to end the session.
+Endpoint: v3-ot
 
 Loaded tokenizer from: /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 Detected ChatML format (Qwen)
@@ -407,7 +421,7 @@ Goodbye!
 nvidia-smi
 
 # Check model path exists
-ls -la $MODEL_DIR/config.json
+ls -la /workspace/qwen2.5-1.5b-instruct-weights/config.json
 ```
 
 ### Connection Refused
@@ -426,7 +440,7 @@ Ensure you're using the `--tokenizer` flag:
 ./target/release/shardlm-v2-client generate \
   -s http://localhost:9090 \
   -p "Hello!" \
-  --tokenizer $MODEL_DIR/tokenizer.json  # Required!
+  --tokenizer /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json  # Required!
 ```
 
 ### Out of Memory
