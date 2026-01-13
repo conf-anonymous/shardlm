@@ -2627,6 +2627,7 @@ dependencies = [
  "serde_json",
  "statrs",
  "thiserror 1.0.69",
+ "tokenizers",
  "tokio",
  "tokio-tungstenite",
  "tracing",

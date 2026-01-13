@@ -40,6 +40,10 @@ pub enum ClientError {
     /// Invalid argument
     #[error("Invalid argument: {0}")]
     InvalidArgument(String),
+
+    /// Tokenizer error
+    #[error("Tokenizer error: {0}")]
+    Tokenizer(String),
 }
 
 /// Result type for client operations

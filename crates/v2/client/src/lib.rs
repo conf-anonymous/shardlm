@@ -46,6 +46,7 @@ use inference::{
 };
 use rand::Rng;
 use session::CreateSessionRequest;
+use std::path::Path;
 use std::time::Instant;
 
 /// ShardLM V2 client
@@ -58,6 +59,12 @@ pub struct ShardLmClient {
     session_id: Option<String>,
     /// Server info (cached)
     server_info: Option<ServerInfo>,
+    /// Tokenizer for encoding/decoding
+    tokenizer: Option<tokenizers::Tokenizer>,
+    /// EOS token ID
+    eos_token_id: u32,
+    /// EOT token ID (end of turn)
+    eot_token_id: u32,
 }
 
 impl ShardLmClient {
@@ -73,7 +80,37 @@ impl ShardLmClient {
             http,
             session_id: None,
             server_info: None,
+            tokenizer: None,
+            eos_token_id: 151645, // Qwen default
+            eot_token_id: 151643, // Qwen default
         }
+    }
+
+    /// Load tokenizer from file
+    pub fn load_tokenizer(&mut self, path: impl AsRef<Path>) -> Result<()> {
+        let tokenizer = tokenizers::Tokenizer::from_file(path.as_ref())
+            .map_err(|e| ClientError::Tokenizer(e.to_string()))?;
+
+        // Detect Qwen tokenizer by checking for ChatML tokens
+        let has_chatml = tokenizer.token_to_id("<|im_start|>").is_some();
+
+        if has_chatml {
+            // Qwen 2.5 uses ChatML format
+            self.eos_token_id = tokenizer.token_to_id("<|endoftext|>").unwrap_or(151643);
+            self.eot_token_id = tokenizer.token_to_id("<|im_end|>").unwrap_or(151645);
+        } else {
+            // Llama 3.x format
+            self.eos_token_id = tokenizer.token_to_id("<|end_of_text|>").unwrap_or(128001);
+            self.eot_token_id = tokenizer.token_to_id("<|eot_id|>").unwrap_or(128009);
+        }
+
+        self.tokenizer = Some(tokenizer);
+        Ok(())
+    }
+
+    /// Check if tokenizer is loaded
+    pub fn has_tokenizer(&self) -> bool {
+        self.tokenizer.is_some()
     }
 
     /// Get the server URL
@@ -444,10 +481,8 @@ impl ShardLmClient {
             self.create_session().await?;
         }
 
-        // Get server info for tokenizer access
-        // For now, we use a simple word-based tokenization as placeholder
-        // In production, we'd use the actual tokenizer from the server
-        let token_ids: Vec<u32> = self.simple_tokenize(prompt);
+        // Tokenize prompt - use real tokenizer if available
+        let token_ids: Vec<u32> = self.tokenize(prompt)?;
         let prompt_len = token_ids.len();
 
         let mut timing = GenerationTiming::default();
@@ -472,9 +507,9 @@ impl ShardLmClient {
         let first_token = self.sample_token(&logits, temperature);
         generated_tokens.push(first_token);
 
-        // EOS tokens for Qwen 2.5
-        const EOS_TOKEN: u32 = 151645;
-        const EOT_TOKEN: u32 = 151643;
+        // Use configured EOS tokens
+        let eos_token = self.eos_token_id;
+        let eot_token = self.eot_token_id;
 
         // Initialize KV cache from prefill
         let mut k_cache = prefill_result.k_cache;
@@ -482,8 +517,8 @@ impl ShardLmClient {
 
         // Continue generating if we haven't hit EOS and have tokens left
         let mut current_token = first_token;
-        while current_token != EOS_TOKEN
-            && current_token != EOT_TOKEN
+        while current_token != eos_token
+            && current_token != eot_token
             && generated_tokens.len() < max_tokens
         {
             // Get embedding for the new token
@@ -520,8 +555,8 @@ impl ShardLmClient {
             0.0
         };
 
-        // Simple decode (placeholder - in production would use actual tokenizer)
-        let text = self.simple_detokenize(&generated_tokens);
+        // Decode tokens to text - use real tokenizer if available
+        let text = self.detokenize(&generated_tokens)?;
 
         Ok(GenerationResult {
             token_ids: generated_tokens,
@@ -530,11 +565,38 @@ impl ShardLmClient {
         })
     }
 
-    /// Simple word-based tokenization (placeholder)
-    /// In production, use the actual model tokenizer
-    pub fn simple_tokenize(&self, text: &str) -> Vec<u32> {
+    /// Tokenize text to token IDs
+    ///
+    /// Uses the loaded tokenizer if available, otherwise falls back to simple ASCII tokenization.
+    pub fn tokenize(&self, text: &str) -> Result<Vec<u32>> {
+        if let Some(ref tokenizer) = self.tokenizer {
+            let encoding = tokenizer
+                .encode(text, true)
+                .map_err(|e| ClientError::Tokenizer(e.to_string()))?;
+            Ok(encoding.get_ids().to_vec())
+        } else {
+            // Fallback to simple ASCII tokenization
+            Ok(self.simple_tokenize(text))
+        }
+    }
+
+    /// Detokenize token IDs to text
+    ///
+    /// Uses the loaded tokenizer if available, otherwise falls back to simple ASCII detokenization.
+    pub fn detokenize(&self, token_ids: &[u32]) -> Result<String> {
+        if let Some(ref tokenizer) = self.tokenizer {
+            tokenizer
+                .decode(token_ids, true)
+                .map_err(|e| ClientError::Tokenizer(e.to_string()))
+        } else {
+            // Fallback to simple ASCII detokenization
+            Ok(self.simple_detokenize(token_ids))
+        }
+    }
+
+    /// Simple word-based tokenization (fallback when no tokenizer is loaded)
+    fn simple_tokenize(&self, text: &str) -> Vec<u32> {
         // Use simple character-level tokenization as placeholder
-        // Real implementation would load tokenizer from model
         text.chars()
             .filter_map(|c| {
                 if c.is_ascii() {
@@ -546,7 +608,7 @@ impl ShardLmClient {
             .collect()
     }
 
-    /// Simple detokenization (placeholder)
+    /// Simple detokenization (fallback when no tokenizer is loaded)
     fn simple_detokenize(&self, token_ids: &[u32]) -> String {
         token_ids
             .iter()
@@ -571,7 +633,7 @@ impl ShardLmClient {
             self.create_session().await?;
         }
 
-        let token_ids: Vec<u32> = self.simple_tokenize(prompt);
+        let token_ids: Vec<u32> = self.tokenize(prompt)?;
         let mut results = Vec::with_capacity(runs);
 
         for _ in 0..runs {

@@ -40,6 +40,9 @@ console = "0.15"
 # Random (for secret sharing)
 rand = { workspace = true }
 
+# Tokenizer (for proper text encoding/decoding)
+tokenizers = { workspace = true }
+
 # Statistics
 statrs = "0.18"
 

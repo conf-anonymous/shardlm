@@ -90,6 +90,10 @@ enum Commands {
         /// Show timing information
         #[arg(long, default_value = "false")]
         timing: bool,
+
+        /// Path to tokenizer.json file (from model directory)
+        #[arg(long)]
+        tokenizer: Option<String>,
     },
 
     /// Run performance benchmarks
@@ -140,6 +144,10 @@ enum Commands {
         /// Temperature for sampling
         #[arg(short, long, default_value = "0.7")]
         temperature: f32,
+
+        /// Path to tokenizer.json file (from model directory)
+        #[arg(long)]
+        tokenizer: Option<String>,
     },
 }
 
@@ -168,8 +176,9 @@ async fn main() -> Result<()> {
             max_tokens,
             temperature,
             timing,
+            tokenizer,
         } => {
-            run_generate(&server_url, &prompt, max_tokens, temperature, timing).await?;
+            run_generate(&server_url, &prompt, max_tokens, temperature, timing, tokenizer.as_deref()).await?;
         }
         Commands::Benchmark {
             server_url,
@@ -197,8 +206,9 @@ async fn main() -> Result<()> {
             server_url,
             max_tokens,
             temperature,
+            tokenizer,
         } => {
-            run_chat(&server_url, max_tokens, temperature).await?;
+            run_chat(&server_url, max_tokens, temperature, tokenizer.as_deref()).await?;
         }
     }
 
@@ -258,12 +268,19 @@ async fn run_generate(
     max_tokens: usize,
     temperature: f32,
     show_timing: bool,
+    tokenizer_path: Option<&str>,
 ) -> Result<()> {
     println!("Generating from: \"{}\"", prompt);
     println!("Server: {}", server_url);
     println!();
 
     let mut client = ShardLmClient::new(server_url);
+
+    // Load tokenizer if path provided
+    if let Some(path) = tokenizer_path {
+        client.load_tokenizer(path)?;
+        println!("Loaded tokenizer from: {}", path);
+    }
 
     match client.generate(prompt, max_tokens, temperature).await {
         Ok(result) => {
@@ -338,11 +355,17 @@ async fn run_benchmark(
     Ok(())
 }
 
-async fn run_chat(server_url: &str, max_tokens: usize, temperature: f32) -> Result<()> {
+async fn run_chat(server_url: &str, max_tokens: usize, temperature: f32, tokenizer_path: Option<&str>) -> Result<()> {
     println!("{}", style("ShardLM V2 Interactive Chat").cyan().bold());
     println!("Type 'quit' or 'exit' to end the session.\n");
 
     let mut client = ShardLmClient::new(server_url);
+
+    // Load tokenizer if path provided
+    if let Some(path) = tokenizer_path {
+        client.load_tokenizer(path)?;
+        println!("Loaded tokenizer from: {}", path);
+    }
 
     // Create session
     match client.create_session().await {
