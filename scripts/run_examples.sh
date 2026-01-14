@@ -169,13 +169,16 @@ start_server() {
     cargo build -p shardlm-v2-server --features "$features" --release 2>&1 | tail -3
 
     print_step "Starting $server_name server..."
+    # Redirect server logs to file to avoid interleaving with client output
+    SERVER_LOG="/tmp/shardlm_server_$$.log"
     SHARDLM_V2_MODEL_DIR="$MODEL_DIR" \
     SHARDLM_V2_MODEL_ARCH="$MODEL_ARCH" \
     SHARDLM_V2_NUM_GPUS="$NUM_GPUS" \
     SHARDLM_V2_PORT=9090 \
-    RUST_LOG=info \
-    ./target/release/shardlm-v2-server &
+    RUST_LOG=warn \
+    ./target/release/shardlm-v2-server > "$SERVER_LOG" 2>&1 &
     SERVER_PID=$!
+    print_info "Server logs: $SERVER_LOG"
 
     # Wait for server to be ready (up to 3 minutes for large models)
     print_info "Waiting for server to start (may take 2-3 minutes for weight loading)..."
