@@ -15,7 +15,7 @@ default = []
 cuda = ["shardlm-v2-model/cuda", "shardlm-v2-core/cuda", "shardlm-v2-sharing/cuda"]
 binary-protocol = ["bincode"]
 mpc-secure = []
-h100-cc = ["cuda", "shardlm-v2-cc"]
+h100-cc = ["cuda", "shardlm-v2-cc/software-cc"]
 
 [dependencies]
 # Web framework

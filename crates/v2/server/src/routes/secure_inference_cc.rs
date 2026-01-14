@@ -253,6 +253,7 @@ pub async fn verify_attestation(
 /// for API consistency, even though CC could safely operate on combined values
 /// inside the enclave.
 #[cfg(feature = "h100-cc")]
+#[axum::debug_handler]
 #[allow(deprecated)] // CC mode safely uses _approx functions (hardware encrypts memory)
 pub async fn cc_prefill(
     State(state): State<AppState>,
@@ -271,26 +272,52 @@ pub async fn cc_prefill(
         init_cc_provider()?;
     }
 
-    let cc = get_cc().await?;
-    let hardware_cc = cc.is_available();
-    let provider_name = cc.provider_name().to_string();
+    // IMPORTANT: Complete ALL async operations (.await) BEFORE acquiring parking_lot guards.
+    // parking_lot guards are not Send and cannot be held across await boundaries.
+    // This follows the same pattern as mpc_prefill.
 
-    // Verify client attestation if provided
-    if let Some(ref client_attest) = request.client_attestation {
-        let valid = cc.verify_attestation(client_attest)
-            .map_err(|e| ServerError::Internal(format!("Client attestation failed: {}", e)))?;
+    // Get CC provider and extract all needed info (async operation)
+    let (hardware_cc, provider_name, server_attestation) = {
+        let cc = get_cc().await?;
+        let hardware_cc = cc.is_available();
+        let provider_name = cc.provider_name().to_string();
 
-        if !valid {
-            return Err(ServerError::InvalidRequest(
-                "Client attestation verification failed".into()
-            ));
+        // Verify client attestation if provided
+        if let Some(ref client_attest) = request.client_attestation {
+            let valid = cc.verify_attestation(client_attest)
+                .map_err(|e| ServerError::Internal(format!("Client attestation failed: {}", e)))?;
+
+            if !valid {
+                return Err(ServerError::InvalidRequest(
+                    "Client attestation verification failed".into()
+                ));
+            }
+
+            tracing::info!(
+                session_id = %request.session_id,
+                "Client attestation verified"
+            );
         }
 
-        tracing::info!(
-            session_id = %request.session_id,
-            "Client attestation verified"
-        );
-    }
+        // Get attestation NOW while we have the lock (avoid second await later)
+        let server_attestation = cc.get_attestation()
+            .map_err(|e| ServerError::Internal(format!("Attestation failed: {}", e)))?;
+
+        // Encrypt input data for secure GPU transfer (when hardware CC is available)
+        if hardware_cc {
+            let hidden_client_flat: Vec<f32> = request.hidden_client.iter().flatten().copied().collect();
+            let hidden_server_flat: Vec<f32> = request.hidden_server.iter().flatten().copied().collect();
+
+            let _encrypted_client = cc.encrypt_buffer(&hidden_client_flat)
+                .map_err(|e| ServerError::Internal(format!("Encryption failed: {}", e)))?;
+            let _encrypted_server = cc.encrypt_buffer(&hidden_server_flat)
+                .map_err(|e| ServerError::Internal(format!("Encryption failed: {}", e)))?;
+
+            tracing::debug!("Input tensors encrypted for secure GPU transfer");
+        }
+
+        (hardware_cc, provider_name, server_attestation)
+    }; // CC lock dropped here, BEFORE parking_lot guards
 
     let seq_len = request.hidden_client.len();
 
@@ -302,21 +329,7 @@ pub async fn cc_prefill(
         "V3-CC prefill starting (secure KV cache as shares)"
     );
 
-    // Encrypt input data for secure GPU transfer (when hardware CC is available)
-    if hardware_cc {
-        let hidden_client_flat: Vec<f32> = request.hidden_client.iter().flatten().copied().collect();
-        let hidden_server_flat: Vec<f32> = request.hidden_server.iter().flatten().copied().collect();
-
-        let _encrypted_client = cc.encrypt_buffer(&hidden_client_flat)
-            .map_err(|e| ServerError::Internal(format!("Encryption failed: {}", e)))?;
-        let _encrypted_server = cc.encrypt_buffer(&hidden_server_flat)
-            .map_err(|e| ServerError::Internal(format!("Encryption failed: {}", e)))?;
-
-        tracing::debug!("Input tensors encrypted for secure GPU transfer");
-    }
-
-    // Drop the CC lock before GPU operations
-    drop(cc);
+    // NOW acquire parking_lot guards (after all .await points)
 
     // Get GPU resources
     let gpu_weights_guard = state.get_gpu_secure_weights()?;
@@ -596,10 +609,7 @@ pub async fn cc_prefill(
         .map_err(|e| ServerError::GpuError(e.to_string()))?
         .unwrap_or_default();
 
-    // Get fresh attestation for response
-    let cc = get_cc().await?;
-    let server_attestation = cc.get_attestation()
-        .map_err(|e| ServerError::Internal(format!("Attestation failed: {}", e)))?;
+    // No more .await points after this - we got the attestation at the start
 
     let elapsed = start_time.elapsed();
 

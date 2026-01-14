@@ -104,7 +104,10 @@ pub fn create_router(state: AppState) -> Router {
     #[cfg(feature = "h100-cc")]
     let router = router
         .route("/v3/cc/attestation", get(secure_inference_cc::get_attestation))
-        .route("/v3/cc/verify", post(secure_inference_cc::verify_attestation))
+        .route("/v3/cc/verify", post(secure_inference_cc::verify_attestation));
+
+    #[cfg(feature = "h100-cc")]
+    let router = router
         .route("/v3/cc/prefill", post(secure_inference_cc::cc_prefill));
 
     // =================================================================
