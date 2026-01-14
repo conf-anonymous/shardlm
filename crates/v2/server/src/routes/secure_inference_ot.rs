@@ -611,49 +611,34 @@ pub async fn ot_prefill(
     let mut v_cache_server: Vec<Vec<Vec<f32>>> = Vec::with_capacity(num_layers);
 
     for layer_idx in 0..num_layers {
-        let layer = &gpu_weights.layers[layer_idx];
+        let layer = gpu_weights.layer(layer_idx);
         let mut layer_k_client = Vec::with_capacity(seq_len);
         let mut layer_k_server = Vec::with_capacity(seq_len);
         let mut layer_v_client = Vec::with_capacity(seq_len);
         let mut layer_v_server = Vec::with_capacity(seq_len);
 
         for pos in 0..seq_len {
-            // Linear projections preserve sharing
-            let (qkv_client, qkv_server) = layer.qkv.forward_secure_gpu_tensor(
+            // QKV projection using GPU-native attention API
+            let qkv_result = layer.attention.project_qkv_gpu_tensor(
                 &hidden_client_gpu[pos],
                 &hidden_server_gpu[pos],
+                pos,
                 kernels,
                 device,
             ).map_err(|e| ServerError::Internal(format!("QKV projection failed: {}", e)))?;
 
-            // Extract K, V from QKV (client and server shares)
-            let qkv_c = qkv_client.to_f32_host(device)
+            // Download K, V for cache as SEPARATE SHARES - NEVER combine!
+            let k_c = qkv_result.k_client.to_f32_host(device)
                 .map_err(|e| ServerError::GpuError(e.to_string()))?;
-            let qkv_s = qkv_server.to_f32_host(device)
+            let k_s = qkv_result.k_server.to_f32_host(device)
                 .map_err(|e| ServerError::GpuError(e.to_string()))?;
-
-            let head_dim = config.model_architecture.head_dim();
-            let num_heads = config.model_architecture.num_heads();
-            let num_kv_heads = config.model_architecture.num_kv_heads();
-
-            let q_dim = num_heads * head_dim;
-            let kv_dim = num_kv_heads * head_dim;
-
-            // K starts after Q
-            let k_start = q_dim;
-            let k_end = k_start + kv_dim;
-
-            // V starts after K
-            let v_start = k_end;
-            let v_end = v_start + kv_dim;
+            let v_c = qkv_result.v_client.to_f32_host(device)
+                .map_err(|e| ServerError::GpuError(e.to_string()))?;
+            let v_s = qkv_result.v_server.to_f32_host(device)
+                .map_err(|e| ServerError::GpuError(e.to_string()))?;
 
             // Store K, V as SEPARATE SHARES - NEVER add them together!
             // The client will perform secure attention using OT-based multiplication
-            let k_c: Vec<f32> = qkv_c[k_start..k_end].to_vec();
-            let k_s: Vec<f32> = qkv_s[k_start..k_end].to_vec();
-            let v_c: Vec<f32> = qkv_c[v_start..v_end].to_vec();
-            let v_s: Vec<f32> = qkv_s[v_start..v_end].to_vec();
-
             layer_k_client.push(k_c);
             layer_k_server.push(k_s);
             layer_v_client.push(v_c);
@@ -692,10 +677,10 @@ pub async fn ot_prefill(
 
     let elapsed = start_time.elapsed();
 
-    let table_memory_kb = tables.silu.values_bytes.len() as f64 / 1024.0
-        + tables.rsqrt.values_bytes.len() as f64 / 1024.0
-        + tables.exp.values_bytes.len() as f64 / 1024.0
-        + tables.reciprocal.values_bytes.len() as f64 / 1024.0;
+    let table_memory_kb = tables.silu.memory_bytes() as f64 / 1024.0
+        + tables.rsqrt.memory_bytes() as f64 / 1024.0
+        + tables.exp.memory_bytes() as f64 / 1024.0
+        + tables.reciprocal.memory_bytes() as f64 / 1024.0;
 
     let ot_info = OtInfo {
         ot_queries: request.ot_queries.len(),

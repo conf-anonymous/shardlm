@@ -98,6 +98,11 @@ impl OtFunctionTable {
     pub fn size(&self) -> usize {
         self.table_size
     }
+
+    /// Get memory usage in bytes
+    pub fn memory_bytes(&self) -> usize {
+        self.values_bytes.len()
+    }
 }
 
 /// Manages OT sessions for secure function evaluation
