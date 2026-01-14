@@ -23,43 +23,32 @@
 //! This module requires both `mpc-secure` and `cuda` features because GPU-accelerated
 //! MPC operations are used for linear layers while CPU MPC is used for nonlinear ops.
 
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 use axum::{
     extract::State,
     Json,
 };
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 use serde::{Deserialize, Serialize};
+use std::time::Instant;
+use once_cell::sync::OnceCell;
+use tokio::sync::RwLock;
 
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 use crate::error::{Result, ServerError};
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 use crate::state::AppState;
 
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
+// MPC-specific imports from sharing crate
 use shardlm_v2_sharing::beaver::{BeaverTripleStore, BeaverTriple};
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 use shardlm_v2_sharing::{
     secure_rms_norm_mpc, secure_swiglu_mpc, secure_softmax_mpc,
     ServerContext,
 };
 
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
-use once_cell::sync::OnceCell;
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
-use tokio::sync::RwLock;
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
-use std::time::Instant;
-
 // =============================================================================
 // GLOBAL MPC STATE (initialized once per model load)
 // =============================================================================
 
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 static TRIPLE_STORE: OnceCell<RwLock<BeaverTripleStore>> = OnceCell::new();
 
 /// Initialize the global Beaver triple store
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 pub fn init_triple_store(num_layers: usize, triples_per_layer: usize) -> Result<()> {
     let store = BeaverTripleStore::pregenerate(num_layers, triples_per_layer);
 
@@ -78,7 +67,6 @@ pub fn init_triple_store(num_layers: usize, triples_per_layer: usize) -> Result<
 }
 
 /// Compute triples needed per layer for MPC operations
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 fn triples_needed_per_layer(hidden_dim: usize, seq_len: usize) -> usize {
     // RMSNorm: hidden_dim squares + hidden_dim multiplies
     let rmsnorm_triples = hidden_dim * 2 + 10;
@@ -95,7 +83,6 @@ fn triples_needed_per_layer(hidden_dim: usize, seq_len: usize) -> usize {
 // =============================================================================
 
 /// MPC-protected prefill request
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 #[derive(Debug, Deserialize)]
 pub struct MpcPrefillRequest {
     /// Session ID
@@ -110,7 +97,6 @@ pub struct MpcPrefillRequest {
 ///
 /// SECURITY: All values are returned as SHARES. The server never sees plaintext.
 /// K, V caches are split into client/server shares to maintain MPC security.
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 #[derive(Debug, Serialize)]
 pub struct MpcPrefillResponse {
     /// Final hidden state (client share)
@@ -130,7 +116,6 @@ pub struct MpcPrefillResponse {
 }
 
 /// MPC execution information
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 #[derive(Debug, Serialize)]
 pub struct MpcInfo {
     /// Number of Beaver triples used
@@ -146,7 +131,6 @@ pub struct MpcInfo {
 }
 
 /// MPC configuration information
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 #[derive(Debug, Serialize)]
 pub struct MpcConfigInfo {
     pub num_layers: usize,
@@ -173,7 +157,7 @@ pub struct MpcConfigInfo {
 /// - Beaver triples for secure multiplication
 /// - Polynomial approximations that operate on shares only
 /// - No plaintext reconstruction anywhere in the pipeline
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
+#[cfg(feature = "cuda")]
 pub async fn mpc_prefill(
     State(state): State<AppState>,
     Json(request): Json<MpcPrefillRequest>,
@@ -563,7 +547,7 @@ pub async fn mpc_prefill(
 /// - Dot products use secure_multiply_mpc with Beaver triples
 /// - Softmax uses secure_softmax_mpc with polynomial approximation
 /// - Output is returned as shares
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
+#[cfg(feature = "cuda")]
 fn compute_mpc_attention_on_shares(
     q_client: &[f32],
     q_server: &[f32],
@@ -669,7 +653,6 @@ fn compute_mpc_attention_on_shares(
 }
 
 /// GET /v3/mpc/info - Get MPC configuration info
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 pub async fn mpc_info(
     State(state): State<AppState>,
 ) -> Result<Json<MpcConfigInfo>> {

@@ -12,7 +12,7 @@ pub mod binary_protocol;
 #[cfg(feature = "h100-cc")]
 pub mod secure_inference_cc;
 
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
+#[cfg(feature = "mpc-secure")]
 pub mod secure_inference_mpc;
 
 pub mod secure_inference_ot;
@@ -110,9 +110,12 @@ pub fn create_router(state: AppState) -> Router {
     // =================================================================
     // V3-MPC: True MPC with Beaver triples (no plaintext reconstruction)
     // =================================================================
+    #[cfg(feature = "mpc-secure")]
+    let router = router
+        .route("/v3/mpc/info", get(secure_inference_mpc::mpc_info));
+
     #[cfg(all(feature = "mpc-secure", feature = "cuda"))]
     let router = router
-        .route("/v3/mpc/info", get(secure_inference_mpc::mpc_info))
         .route("/v3/mpc/prefill", post(secure_inference_mpc::mpc_prefill));
 
     // =================================================================
