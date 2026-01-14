@@ -12,7 +12,7 @@ pub mod binary_protocol;
 #[cfg(feature = "h100-cc")]
 pub mod secure_inference_cc;
 
-#[cfg(feature = "mpc-secure")]
+#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 pub mod secure_inference_mpc;
 
 pub mod secure_inference_ot;
