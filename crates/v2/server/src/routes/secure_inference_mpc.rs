@@ -158,6 +158,7 @@ pub struct MpcConfigInfo {
 /// - Polynomial approximations that operate on shares only
 /// - No plaintext reconstruction anywhere in the pipeline
 #[cfg(feature = "cuda")]
+#[axum::debug_handler]
 pub async fn mpc_prefill(
     State(state): State<AppState>,
     Json(request): Json<MpcPrefillRequest>,
