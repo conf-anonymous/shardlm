@@ -368,13 +368,45 @@ impl ShardLmClient {
             });
         }
 
-        // The CC response has additional fields, but we extract just the base response
+        // The CC response returns separate K,V shares - client reconstructs combined cache
         let response: serde_json::Value = resp.json().await?;
+
+        // Reconstruct KV cache by combining client + server shares
+        let k_cache_client: Vec<Vec<Vec<f32>>> = serde_json::from_value(response["k_cache_client"].clone())?;
+        let k_cache_server: Vec<Vec<Vec<f32>>> = serde_json::from_value(response["k_cache_server"].clone())?;
+        let v_cache_client: Vec<Vec<Vec<f32>>> = serde_json::from_value(response["v_cache_client"].clone())?;
+        let v_cache_server: Vec<Vec<Vec<f32>>> = serde_json::from_value(response["v_cache_server"].clone())?;
+
+        // Combine shares: k_cache[layer][pos] = k_cache_client[layer][pos] + k_cache_server[layer][pos]
+        let k_cache: Vec<Vec<Vec<f32>>> = k_cache_client.iter()
+            .zip(k_cache_server.iter())
+            .map(|(client_layer, server_layer)| {
+                client_layer.iter()
+                    .zip(server_layer.iter())
+                    .map(|(c_pos, s_pos)| {
+                        c_pos.iter().zip(s_pos.iter()).map(|(c, s)| c + s).collect()
+                    })
+                    .collect()
+            })
+            .collect();
+
+        let v_cache: Vec<Vec<Vec<f32>>> = v_cache_client.iter()
+            .zip(v_cache_server.iter())
+            .map(|(client_layer, server_layer)| {
+                client_layer.iter()
+                    .zip(server_layer.iter())
+                    .map(|(c_pos, s_pos)| {
+                        c_pos.iter().zip(s_pos.iter()).map(|(c, s)| c + s).collect()
+                    })
+                    .collect()
+            })
+            .collect();
+
         let prefill_response = BatchedPrefillResponse {
             final_hidden_client: serde_json::from_value(response["final_hidden_client"].clone())?,
             final_hidden_server: serde_json::from_value(response["final_hidden_server"].clone())?,
-            k_cache: serde_json::from_value(response["k_cache"].clone())?,
-            v_cache: serde_json::from_value(response["v_cache"].clone())?,
+            k_cache,
+            v_cache,
             logits_client: serde_json::from_value(response["logits_client"].clone())?,
             logits_server: serde_json::from_value(response["logits_server"].clone())?,
         };
@@ -409,13 +441,45 @@ impl ShardLmClient {
             });
         }
 
-        // The MPC response has additional fields, but we extract just the base response
+        // The MPC response returns separate K,V shares - client reconstructs combined cache
         let response: serde_json::Value = resp.json().await?;
+
+        // Reconstruct KV cache by combining client + server shares
+        let k_cache_client: Vec<Vec<Vec<f32>>> = serde_json::from_value(response["k_cache_client"].clone())?;
+        let k_cache_server: Vec<Vec<Vec<f32>>> = serde_json::from_value(response["k_cache_server"].clone())?;
+        let v_cache_client: Vec<Vec<Vec<f32>>> = serde_json::from_value(response["v_cache_client"].clone())?;
+        let v_cache_server: Vec<Vec<Vec<f32>>> = serde_json::from_value(response["v_cache_server"].clone())?;
+
+        // Combine shares: k_cache[layer][pos] = k_cache_client[layer][pos] + k_cache_server[layer][pos]
+        let k_cache: Vec<Vec<Vec<f32>>> = k_cache_client.iter()
+            .zip(k_cache_server.iter())
+            .map(|(client_layer, server_layer)| {
+                client_layer.iter()
+                    .zip(server_layer.iter())
+                    .map(|(c_pos, s_pos)| {
+                        c_pos.iter().zip(s_pos.iter()).map(|(c, s)| c + s).collect()
+                    })
+                    .collect()
+            })
+            .collect();
+
+        let v_cache: Vec<Vec<Vec<f32>>> = v_cache_client.iter()
+            .zip(v_cache_server.iter())
+            .map(|(client_layer, server_layer)| {
+                client_layer.iter()
+                    .zip(server_layer.iter())
+                    .map(|(c_pos, s_pos)| {
+                        c_pos.iter().zip(s_pos.iter()).map(|(c, s)| c + s).collect()
+                    })
+                    .collect()
+            })
+            .collect();
+
         let prefill_response = BatchedPrefillResponse {
             final_hidden_client: serde_json::from_value(response["final_hidden_client"].clone())?,
             final_hidden_server: serde_json::from_value(response["final_hidden_server"].clone())?,
-            k_cache: serde_json::from_value(response["k_cache"].clone())?,
-            v_cache: serde_json::from_value(response["v_cache"].clone())?,
+            k_cache,
+            v_cache,
             logits_client: serde_json::from_value(response["logits_client"].clone())?,
             logits_server: serde_json::from_value(response["logits_server"].clone())?,
         };
@@ -450,13 +514,45 @@ impl ShardLmClient {
             });
         }
 
-        // The OT response has additional fields, but we extract just the base response
+        // The OT response returns separate K,V shares - client reconstructs combined cache
         let response: serde_json::Value = resp.json().await?;
+
+        // Reconstruct KV cache by combining client + server shares
+        let k_cache_client: Vec<Vec<Vec<f32>>> = serde_json::from_value(response["k_cache_client"].clone())?;
+        let k_cache_server: Vec<Vec<Vec<f32>>> = serde_json::from_value(response["k_cache_server"].clone())?;
+        let v_cache_client: Vec<Vec<Vec<f32>>> = serde_json::from_value(response["v_cache_client"].clone())?;
+        let v_cache_server: Vec<Vec<Vec<f32>>> = serde_json::from_value(response["v_cache_server"].clone())?;
+
+        // Combine shares: k_cache[layer][pos] = k_cache_client[layer][pos] + k_cache_server[layer][pos]
+        let k_cache: Vec<Vec<Vec<f32>>> = k_cache_client.iter()
+            .zip(k_cache_server.iter())
+            .map(|(client_layer, server_layer)| {
+                client_layer.iter()
+                    .zip(server_layer.iter())
+                    .map(|(c_pos, s_pos)| {
+                        c_pos.iter().zip(s_pos.iter()).map(|(c, s)| c + s).collect()
+                    })
+                    .collect()
+            })
+            .collect();
+
+        let v_cache: Vec<Vec<Vec<f32>>> = v_cache_client.iter()
+            .zip(v_cache_server.iter())
+            .map(|(client_layer, server_layer)| {
+                client_layer.iter()
+                    .zip(server_layer.iter())
+                    .map(|(c_pos, s_pos)| {
+                        c_pos.iter().zip(s_pos.iter()).map(|(c, s)| c + s).collect()
+                    })
+                    .collect()
+            })
+            .collect();
+
         let prefill_response = BatchedPrefillResponse {
             final_hidden_client: serde_json::from_value(response["final_hidden_client"].clone())?,
             final_hidden_server: serde_json::from_value(response["final_hidden_server"].clone())?,
-            k_cache: serde_json::from_value(response["k_cache"].clone())?,
-            v_cache: serde_json::from_value(response["v_cache"].clone())?,
+            k_cache,
+            v_cache,
             logits_client: serde_json::from_value(response["logits_client"].clone())?,
             logits_server: serde_json::from_value(response["logits_server"].clone())?,
         };

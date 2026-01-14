@@ -302,7 +302,9 @@ pub struct OtPrefillRequest {
     /// Hidden states (server share) [seq_len][hidden_dim]
     pub hidden_server: Vec<Vec<f32>>,
     /// OT queries for nonlinear operations (pre-computed by client)
-    /// Each query is for a batch of function lookups
+    /// Each query is for a batch of function lookups.
+    /// Optional - if not provided, server uses simulated OT lookup.
+    #[serde(default)]
     pub ot_queries: Vec<OtBatchQuery>,
 }
 
