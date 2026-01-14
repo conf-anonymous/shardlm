@@ -100,6 +100,11 @@ else
     print_info "Installing Rust..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     source "$HOME/.cargo/env"
+    # Add to .bashrc for future sessions
+    if ! grep -q 'cargo/env' "$HOME/.bashrc" 2>/dev/null; then
+        echo 'source "$HOME/.cargo/env"' >> "$HOME/.bashrc"
+        echo "  Added cargo to .bashrc for future sessions"
+    fi
     echo "  Rust installed: $(rustc --version)"
 fi
 echo ""
@@ -295,3 +300,6 @@ echo "See docs/RUNNING_EACH_VERSION.md for detailed instructions on"
 echo "running each protocol version (V2, V3, V3-CC, V3-MPC, V3-OT)."
 echo ""
 echo "========================================"
+echo ""
+print_warn "If 'cargo' is not found, run: source ~/.cargo/env"
+print_warn "Or start a new terminal session."
