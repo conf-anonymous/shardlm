@@ -575,8 +575,9 @@ mod tests {
 
     #[test]
     fn test_nvidia_cc_provider() {
+        // CudaDevice::new() returns Arc<CudaDevice> in cudarc 0.12+
         let device = match CudaDevice::new(0) {
-            Ok(d) => Arc::new(d),
+            Ok(d) => d, // Already an Arc<CudaDevice>
             Err(_) => {
                 println!("Skipping test - no CUDA device");
                 return;

@@ -202,9 +202,10 @@ else
         if [ "$HAS_CUDA" = true ]; then
             # Check if H100
             if echo "$GPU_NAME" | grep -qi "H100"; then
-                run_package_tests "shardlm-v2-cc" "--features cuda" "Confidential Computing (shardlm-v2-cc)"
+                run_package_tests "shardlm-v2-cc" "--features nvidia-cc" "Confidential Computing (shardlm-v2-cc)"
             else
-                print_warn "Skipping CC tests (requires H100)"
+                # Run with software-cc on non-H100 GPUs
+                run_package_tests "shardlm-v2-cc" "--features software-cc" "Confidential Computing (shardlm-v2-cc)"
             fi
         fi
     fi

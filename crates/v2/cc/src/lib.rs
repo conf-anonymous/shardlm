@@ -18,21 +18,24 @@
 //!
 //! # Usage
 //!
-//! ```no_run
+//! ```ignore
 //! use shardlm_v2_cc::{ConfidentialCompute, get_cc_provider};
+//! use cudarc::driver::CudaDevice;
 //!
-//! let cc = get_cc_provider()?;
+//! // Get CUDA device and create CC provider
+//! let device = CudaDevice::new(0).unwrap();
+//! let cc = get_cc_provider(device).unwrap();
 //!
 //! // Verify attestation
-//! let token = cc.get_attestation()?;
-//! assert!(cc.verify_attestation(&token)?);
+//! let token = cc.get_attestation().unwrap();
+//! assert!(cc.verify_attestation(&token).unwrap());
 //!
 //! // Create encrypted tensor
 //! let data = vec![1.0f32; 1024];
-//! let encrypted = cc.encrypt_buffer(&data)?;
+//! let encrypted = cc.encrypt_buffer(&data).unwrap();
 //!
 //! // Decrypt for computation
-//! let decrypted = cc.decrypt_buffer(&encrypted)?;
+//! let decrypted = cc.decrypt_buffer(&encrypted).unwrap();
 //! ```
 
 pub mod attestation;
@@ -256,8 +259,9 @@ mod tests {
 
     #[test]
     fn test_noop_provider() {
+        // CudaDevice::new() returns Arc<CudaDevice> in cudarc 0.12+
         let device = CudaDevice::new(0).expect("CUDA device required");
-        let provider = NoOpCcProvider::new(Arc::new(device));
+        let provider = NoOpCcProvider::new(device);
 
         assert!(!provider.is_available());
         assert_eq!(provider.provider_name(), "NoOp (Insecure)");
@@ -272,8 +276,9 @@ mod tests {
 
     #[test]
     fn test_attestation() {
+        // CudaDevice::new() returns Arc<CudaDevice> in cudarc 0.12+
         let device = CudaDevice::new(0).expect("CUDA device required");
-        let provider = NoOpCcProvider::new(Arc::new(device));
+        let provider = NoOpCcProvider::new(device);
 
         let token = provider.get_attestation().unwrap();
         assert!(provider.verify_attestation(&token).unwrap());

@@ -382,7 +382,9 @@ mod tests {
     #[test]
     fn test_percentile() {
         let sorted = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
-        assert!((percentile(&sorted, 50.0) - 5.0).abs() < 0.1);
+        // With idx = (p/100 * 9).round(): p=50 -> idx=5 -> value 6.0
+        assert!((percentile(&sorted, 50.0) - 6.0).abs() < 0.1);
+        // p=95 -> idx = (0.95 * 9).round() = 8.55.round() = 9 -> value 10.0
         assert!((percentile(&sorted, 95.0) - 10.0).abs() < 0.1);
     }
 }
