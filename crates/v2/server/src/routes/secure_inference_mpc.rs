@@ -23,17 +23,13 @@
 //! This module requires both `mpc-secure` and `cuda` features because GPU-accelerated
 //! MPC operations are used for linear layers while CPU MPC is used for nonlinear ops.
 
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 use axum::{
     extract::State,
     Json,
 };
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 use serde::{Deserialize, Serialize};
 
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 use crate::error::{Result, ServerError};
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 use crate::state::AppState;
 
 #[cfg(all(feature = "mpc-secure", feature = "cuda"))]
@@ -95,7 +91,6 @@ fn triples_needed_per_layer(hidden_dim: usize, seq_len: usize) -> usize {
 // =============================================================================
 
 /// MPC-protected prefill request
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 #[derive(Debug, Deserialize)]
 pub struct MpcPrefillRequest {
     /// Session ID
@@ -110,7 +105,6 @@ pub struct MpcPrefillRequest {
 ///
 /// SECURITY: All values are returned as SHARES. The server never sees plaintext.
 /// K, V caches are split into client/server shares to maintain MPC security.
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 #[derive(Debug, Serialize)]
 pub struct MpcPrefillResponse {
     /// Final hidden state (client share)
@@ -130,7 +124,6 @@ pub struct MpcPrefillResponse {
 }
 
 /// MPC execution information
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 #[derive(Debug, Serialize)]
 pub struct MpcInfo {
     /// Number of Beaver triples used
@@ -146,7 +139,6 @@ pub struct MpcInfo {
 }
 
 /// MPC configuration information
-#[cfg(all(feature = "mpc-secure", feature = "cuda"))]
 #[derive(Debug, Serialize)]
 pub struct MpcConfigInfo {
     pub num_layers: usize,
