@@ -1,21 +1,27 @@
-//! Secure inference endpoints
+//! Base inference endpoints (V3)
 //!
-//! These endpoints implement privacy-preserving inference using secret sharing
-//! and oblivious transfer. **THE SERVER NEVER SEES PLAINTEXT USER DATA.**
+//! # ⚠️ SECURITY WARNING ⚠️
+//!
+//! These endpoints use `_approx` functions that **RECONSTRUCT PLAINTEXT ON THE SERVER**.
+//! They are intended for:
+//! - Testing and benchmarking
+//! - Baseline performance comparisons
+//! - Development and debugging
+//!
+//! For production use with cryptographic security, use:
+//! - `/v3/mpc/*` endpoints - MPC-secure using Beaver triples
+//! - `/v3/ot/*` endpoints - OT-secure using IKNP 1-of-N OT
+//! - `/v3/cc/*` endpoints - H100 Confidential Computing with hardware protection
 //!
 //! # Protocol Overview
 //!
-//! 1. `/v2/secure/session/init` - Initialize OT session with base OT handshake
-//! 2. `/v2/secure/embeddings` - Client retrieves embeddings via OT (server doesn't know which)
+//! 1. `/v2/secure/session/init` - Initialize session
+//! 2. `/v2/secure/embeddings` - Client retrieves embeddings via OT
 //! 3. `/v2/secure/step` - Server processes one transformer layer on shares
-//! 4. `/v2/secure/finalize` - Client finalizes generation (multiple rounds)
-//!
-//! # Security Guarantees
-//!
-//! - Server NEVER reconstructs plaintext from shares
-//! - Server NEVER learns which embeddings were requested
-//! - All nonlinear operations (softmax, SiLU, RMSNorm) are computed client-side
-//! - `ServerContext` type enforces these guarantees at compile time
+//! 4. `/v2/secure/finalize` - Client finalizes generation
+
+// This module intentionally uses deprecated _approx functions for baseline testing
+#![allow(deprecated)]
 
 use std::sync::Arc;
 use std::collections::HashMap;

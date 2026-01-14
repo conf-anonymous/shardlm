@@ -143,6 +143,11 @@ impl BeaverTripleStore {
         }
     }
 
+    /// Get all triples for a specific layer (for MPC operations that need bulk access)
+    pub fn get_layer_triples(&self, layer_idx: usize) -> &[BeaverTriple] {
+        &self.triples[layer_idx]
+    }
+
     /// Get total memory usage in bytes
     pub fn memory_usage(&self) -> usize {
         let triple_size = std::mem::size_of::<BeaverTriple>();

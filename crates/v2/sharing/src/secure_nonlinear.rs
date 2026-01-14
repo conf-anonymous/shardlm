@@ -1,11 +1,29 @@
-//! Secure polynomial approximations for nonlinear functions
+//! Polynomial approximations for nonlinear functions
 //!
-//! This module implements secure computation of nonlinear functions on secret shares
-//! using polynomial approximations. The key insight is that polynomial operations
-//! can be computed on shares using Beaver triples for multiplication.
+//! This module provides both secure and INSECURE implementations of nonlinear functions.
 //!
-//! Security guarantee: The server never sees the plaintext values, only operates
-//! on shares. The approximations maintain the additive secret sharing property.
+//! # ⚠️ SECURITY WARNING ⚠️
+//!
+//! Functions ending in `_approx` (e.g., `secure_silu_approx`, `secure_softmax_approx`)
+//! **RECONSTRUCT PLAINTEXT ON THE SERVER** and are therefore **NOT CRYPTOGRAPHICALLY SECURE**.
+//! These functions should ONLY be used:
+//! - For testing and development
+//! - Inside H100 Confidential Computing enclaves (where hardware protects memory)
+//! - When security is provided by other means (e.g., hardware encryption)
+//!
+//! # Secure Alternatives
+//!
+//! For truly secure MPC computation that never reconstructs plaintext, use:
+//! - `secure_nonlinear_mpc.rs` - MPC-secure functions using Beaver triples
+//! - `secure_nonlinear_mpc_gpu.rs` - GPU-accelerated MPC-secure functions
+//! - `secure_nonlinear_ot.rs` - OT-secure functions using IKNP 1-of-N OT
+//!
+//! # Cryptographic Primitives
+//!
+//! This module also provides truly secure primitives:
+//! - `BeaverTriple` - Pre-computed multiplication triples for MPC
+//! - `secure_multiply` - Secure multiplication using Beaver triples
+//! - `secure_polynomial` - Secure polynomial evaluation on shares
 
 use crate::ServerContext;
 
@@ -92,16 +110,24 @@ pub fn secure_polynomial(
     (result_c, result_s)
 }
 
-/// Secure SiLU (Swish) computation
+/// ⚠️ INSECURE - Reconstructs plaintext on server!
 ///
-/// silu(x) = x * sigmoid(x) = x / (1 + exp(-x))
+/// SiLU (Swish) computation: silu(x) = x * sigmoid(x)
 ///
-/// This implementation reconstructs the value to compute the exact SiLU,
-/// then re-shares the result. This is secure in a practical sense because
-/// the server only sees the share, not the plaintext.
+/// # Security Warning
 ///
-/// For fully MPC-secure computation, use polynomial approximations with
-/// Beaver triples. This is a hybrid approach for maximum accuracy.
+/// **THIS FUNCTION IS NOT CRYPTOGRAPHICALLY SECURE!**
+/// It reconstructs plaintext by computing `x_client + x_server`, which means
+/// the server sees the actual input values. Only use this for:
+/// - Testing and benchmarking
+/// - H100 CC mode (where hardware encrypts memory)
+///
+/// For secure MPC computation, use `secure_silu_mpc` from `secure_nonlinear_mpc.rs`
+/// which uses Beaver triples and never reconstructs plaintext.
+#[deprecated(
+    since = "0.3.0",
+    note = "INSECURE: reconstructs plaintext. Use secure_silu_mpc for MPC-secure computation."
+)]
 pub fn secure_silu_approx(
     x_client: &[f32],
     x_server: &[f32],
@@ -128,12 +154,23 @@ pub fn secure_silu_approx(
     (out_client, out_server)
 }
 
-/// Secure RMSNorm approximation
+/// ⚠️ INSECURE - Reconstructs plaintext on server!
 ///
 /// RMSNorm(x) = x / sqrt(mean(x²) + eps)
 ///
-/// We approximate 1/sqrt(y) using Newton-Raphson or polynomial
-/// 1/sqrt(y) ≈ 1.5 - 0.5*y for y near 1 (after scaling)
+/// # Security Warning
+///
+/// **THIS FUNCTION IS NOT CRYPTOGRAPHICALLY SECURE!**
+/// It reconstructs plaintext by computing `x_client + x_server`, which means
+/// the server sees the actual input values. Only use this for:
+/// - Testing and benchmarking
+/// - H100 CC mode (where hardware encrypts memory)
+///
+/// For secure MPC computation, use `secure_rms_norm_mpc` from `secure_nonlinear_mpc.rs`
+#[deprecated(
+    since = "0.3.0",
+    note = "INSECURE: reconstructs plaintext. Use secure_rms_norm_mpc for MPC-secure computation."
+)]
 pub fn secure_rms_norm_approx(
     x_client: &[f32],
     x_server: &[f32],
@@ -167,12 +204,23 @@ pub fn secure_rms_norm_approx(
     (out_client, out_server)
 }
 
-/// Secure softmax computation
+/// ⚠️ INSECURE - Reconstructs plaintext on server!
 ///
 /// softmax(x)_i = exp(x_i) / sum(exp(x_j))
 ///
-/// This implementation reconstructs values for exact computation.
-/// For numerical stability, we subtract max before exp.
+/// # Security Warning
+///
+/// **THIS FUNCTION IS NOT CRYPTOGRAPHICALLY SECURE!**
+/// It reconstructs plaintext by computing `scores_client + scores_server`, which means
+/// the server sees the actual input values. Only use this for:
+/// - Testing and benchmarking
+/// - H100 CC mode (where hardware encrypts memory)
+///
+/// For secure MPC computation, use `secure_softmax_mpc` from `secure_nonlinear_mpc.rs`
+#[deprecated(
+    since = "0.3.0",
+    note = "INSECURE: reconstructs plaintext. Use secure_softmax_mpc for MPC-secure computation."
+)]
 pub fn secure_softmax_approx(
     scores_client: &[f32],
     scores_server: &[f32],
@@ -218,10 +266,24 @@ pub fn secure_softmax_approx(
     (out_client, out_server)
 }
 
-/// Secure attention computation using polynomial approximations
+/// ⚠️ INSECURE - Operates on reconstructed plaintext!
 ///
 /// Computes attention(Q, K, V) = softmax(Q·K^T / sqrt(d)) · V
-/// All operations use secure approximations
+///
+/// # Security Warning
+///
+/// **THIS FUNCTION IS NOT CRYPTOGRAPHICALLY SECURE!**
+/// It expects already-reconstructed Q, K, V values, which means
+/// the server sees the actual input values. Only use this for:
+/// - Testing and benchmarking
+/// - H100 CC mode (where hardware encrypts memory)
+///
+/// For secure MPC computation, use functions that keep Q, K, V as shares
+/// and use Beaver triples for all multiplications.
+#[deprecated(
+    since = "0.3.0",
+    note = "INSECURE: operates on plaintext. Use MPC-secure attention that keeps K,V as shares."
+)]
 pub fn secure_attention_approx(
     q: &[f32],           // Query vector (reconstructed or shared)
     k_cache: &[Vec<f32>], // Key cache (list of key vectors)
@@ -272,9 +334,23 @@ pub fn secure_attention_approx(
     output
 }
 
-/// Full secure SwiGLU activation: silu(gate) * up
+/// ⚠️ INSECURE - Reconstructs plaintext on server!
 ///
-/// Computes the SwiGLU activation used in Llama/Qwen FFN blocks.
+/// SwiGLU activation: silu(gate) * up
+///
+/// # Security Warning
+///
+/// **THIS FUNCTION IS NOT CRYPTOGRAPHICALLY SECURE!**
+/// It reconstructs plaintext by computing `gate_client + gate_server`, which means
+/// the server sees the actual input values. Only use this for:
+/// - Testing and benchmarking
+/// - H100 CC mode (where hardware encrypts memory)
+///
+/// For secure MPC computation, use `secure_swiglu_mpc` from `secure_nonlinear_mpc.rs`
+#[deprecated(
+    since = "0.3.0",
+    note = "INSECURE: reconstructs plaintext. Use secure_swiglu_mpc for MPC-secure computation."
+)]
 pub fn secure_swiglu_approx(
     gate_client: &[f32],
     gate_server: &[f32],
@@ -304,6 +380,7 @@ pub fn secure_swiglu_approx(
 }
 
 #[cfg(test)]
+#[allow(deprecated)] // Tests intentionally use deprecated _approx functions
 mod tests {
     use super::*;
 

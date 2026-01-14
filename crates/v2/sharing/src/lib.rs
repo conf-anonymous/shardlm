@@ -31,7 +31,10 @@ pub mod secure_nonlinear_mpc;
 pub mod secure_polynomial;
 #[cfg(feature = "cuda")]
 pub mod secure_nonlinear_gpu;
+#[cfg(feature = "cuda")]
+pub mod secure_nonlinear_mpc_gpu;
 pub mod secure_ot;
+pub mod secure_nonlinear_ot;
 pub mod security_assertions;
 pub mod share;
 
@@ -67,6 +70,16 @@ pub use secure_nonlinear_gpu::{
     secure_swiglu_gpu, secure_attention_gpu, secure_add_gpu,
     secure_rms_norm_gpu_vec, secure_swiglu_gpu_vec,
 };
+#[cfg(feature = "cuda")]
+pub use secure_nonlinear_mpc_gpu::{
+    secure_rms_norm_mpc_gpu, secure_swiglu_mpc_gpu, secure_softmax_mpc_gpu,
+    secure_silu_mpc_gpu, triples_for_layer_gpu, MpcInferenceState,
+    secure_rms_norm_mpc_gpu_vec, secure_swiglu_mpc_gpu_vec, secure_softmax_mpc_gpu_vec,
+};
 pub use secure_ot::{OtEmbeddingResult, SecureOtServer};
+pub use secure_nonlinear_ot::{
+    OtFunctionTable, OtFunctionEvaluator, OtFunctionServer, StandardOtTables,
+    secure_silu_ot, secure_rms_norm_ot, secure_swiglu_ot, secure_softmax_ot,
+};
 pub use security_assertions::{SecurityAuditor, SecurityViolation};
 pub use share::{Share, SharePair};
