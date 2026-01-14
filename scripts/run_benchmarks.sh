@@ -216,17 +216,21 @@ start_server() {
     ./target/release/shardlm-v2-server &
     SERVER_PID=$!
 
-    # Wait for server to be ready
-    print_info "Waiting for server to start..."
-    for i in {1..60}; do
+    # Wait for server to be ready (up to 3 minutes for large models)
+    print_info "Waiting for server to start (may take 2-3 minutes for weight loading)..."
+    for i in {1..180}; do
         if check_server; then
             print_success "Server started (PID: $SERVER_PID)"
             return 0
         fi
+        # Show progress every 30 seconds
+        if [ $((i % 30)) -eq 0 ]; then
+            print_info "Still waiting... ($i seconds)"
+        fi
         sleep 1
     done
 
-    print_error "Server failed to start within 60 seconds"
+    print_error "Server failed to start within 180 seconds"
     kill $SERVER_PID 2>/dev/null || true
     return 1
 }
