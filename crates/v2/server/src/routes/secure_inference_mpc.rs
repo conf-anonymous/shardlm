@@ -158,7 +158,6 @@ pub struct MpcConfigInfo {
 /// - Polynomial approximations that operate on shares only
 /// - No plaintext reconstruction anywhere in the pipeline
 #[cfg(feature = "cuda")]
-#[axum::debug_handler]
 pub async fn mpc_prefill(
     State(state): State<AppState>,
     Json(request): Json<MpcPrefillRequest>,
@@ -178,7 +177,32 @@ pub async fn mpc_prefill(
     }
     let hidden_dim = request.hidden_client[0].len();
 
-    // Get GPU resources
+    // IMPORTANT: Acquire tokio async locks FIRST, before any parking_lot locks.
+    // parking_lot guards are not Send, so they cannot be held across .await points.
+    // This matches the pattern used in secure_inference_cc.rs.
+
+    // Initialize triple store with temporary config access
+    let (num_layers_for_init, triples_per_layer_for_init) = {
+        let gpu_weights_guard = state.get_gpu_secure_weights()?;
+        let gpu_weights = gpu_weights_guard.as_ref()
+            .ok_or_else(|| ServerError::Internal("GPU secure weights not initialized".to_string()))?;
+        let num_layers = gpu_weights.num_layers;
+        let triples_per_layer = triples_needed_per_layer(hidden_dim, seq_len);
+        (num_layers, triples_per_layer)
+    }; // parking_lot guard dropped here
+
+    // Initialize triple store if not already done
+    if TRIPLE_STORE.get().is_none() {
+        init_triple_store(num_layers_for_init, triples_per_layer_for_init)?;
+    }
+
+    // Get pre-generated triples (async operation - must happen before parking_lot guards)
+    let store_guard = TRIPLE_STORE.get()
+        .ok_or_else(|| ServerError::Internal("Triple store not initialized".to_string()))?;
+    let store = store_guard.read().await;
+    store.reset();
+
+    // NOW acquire parking_lot guards (after all .await points)
     let gpu_weights_guard = state.get_gpu_secure_weights()?;
     let gpu_weights = gpu_weights_guard.as_ref()
         .ok_or_else(|| ServerError::Internal("GPU secure weights not initialized".to_string()))?;
@@ -200,11 +224,6 @@ pub async fn mpc_prefill(
     let total_triples = triples_per_layer * num_layers;
     let triple_memory_mb = (total_triples * std::mem::size_of::<BeaverTriple>()) as f64 / (1024.0 * 1024.0);
 
-    // Initialize triple store if not already done
-    if TRIPLE_STORE.get().is_none() {
-        init_triple_store(num_layers, triples_per_layer)?;
-    }
-
     tracing::info!(
         session_id = %session_id,
         seq_len = seq_len,
@@ -213,12 +232,6 @@ pub async fn mpc_prefill(
         total_triples = total_triples,
         "V3-MPC prefill starting (REAL MPC - no plaintext reconstruction)"
     );
-
-    // Get pre-generated triples
-    let store_guard = TRIPLE_STORE.get()
-        .ok_or_else(|| ServerError::Internal("Triple store not initialized".to_string()))?;
-    let store = store_guard.read().await;
-    store.reset();
 
     // Create MPC-secure computation context
     let ctx = ServerContext::new();
