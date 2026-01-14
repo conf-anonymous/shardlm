@@ -301,25 +301,28 @@ if [ "$RUN_V3_MPC" = true ]; then
     stop_server
 
     print_step "Building server with MPC support..."
-    cargo build -p shardlm-v2-server --features "cuda,mpc-secure" --release 2>&1 | tail -3
-
-    if ! check_server; then
-        start_server "cuda,mpc-secure" "V3-MPC"
-    fi
-
-    # Test MPC info endpoint first
-    print_step "Testing V3-MPC info endpoint..."
-    if curl -s "$SERVER_URL/v3/mpc/info" | head -c 200; then
-        echo ""
-        print_success "MPC info endpoint working"
+    if ! cargo build -p shardlm-v2-server --features "cuda,mpc-secure" --release; then
+        print_error "Failed to build server with MPC support"
+        RESULTS+=("V3-MPC: BUILD FAILED")
     else
-        print_warn "MPC info endpoint not available (feature may not be enabled)"
-    fi
+        if ! check_server; then
+            start_server "cuda,mpc-secure" "V3-MPC"
+        fi
 
-    if run_example "v3-mpc" "V3-MPC Secure Inference"; then
-        RESULTS+=("V3-MPC: PASS")
-    else
-        RESULTS+=("V3-MPC: FAIL")
+        # Test MPC info endpoint first
+        print_step "Testing V3-MPC info endpoint..."
+        if curl -s "$SERVER_URL/v3/mpc/info" | head -c 200; then
+            echo ""
+            print_success "MPC info endpoint working"
+        else
+            print_warn "MPC info endpoint not available (feature may not be enabled)"
+        fi
+
+        if run_example "v3-mpc" "V3-MPC Secure Inference"; then
+            RESULTS+=("V3-MPC: PASS")
+        else
+            RESULTS+=("V3-MPC: FAIL")
+        fi
     fi
 fi
 
@@ -330,25 +333,28 @@ if [ "$RUN_V3_CC" = true ]; then
     stop_server
 
     print_step "Building server with CC support..."
-    cargo build -p shardlm-v2-server --features "h100-cc,cuda" --release 2>&1 | tail -3
-
-    if ! check_server; then
-        start_server "h100-cc,cuda" "V3-CC"
-    fi
-
-    # Test CC attestation endpoint first
-    print_step "Testing V3-CC attestation endpoint..."
-    if curl -s "$SERVER_URL/v3/cc/attestation" | head -c 200; then
-        echo ""
-        print_success "CC attestation endpoint working"
+    if ! cargo build -p shardlm-v2-server --features "h100-cc,cuda" --release; then
+        print_error "Failed to build server with CC support"
+        RESULTS+=("V3-CC: BUILD FAILED")
     else
-        print_warn "CC attestation endpoint not available (H100 may not be present)"
-    fi
+        if ! check_server; then
+            start_server "h100-cc,cuda" "V3-CC"
+        fi
 
-    if run_example "v3-cc" "V3-CC Secure Inference"; then
-        RESULTS+=("V3-CC: PASS")
-    else
-        RESULTS+=("V3-CC: FAIL")
+        # Test CC attestation endpoint first
+        print_step "Testing V3-CC attestation endpoint..."
+        if curl -s "$SERVER_URL/v3/cc/attestation" | head -c 200; then
+            echo ""
+            print_success "CC attestation endpoint working"
+        else
+            print_warn "CC attestation endpoint not available (H100 may not be present)"
+        fi
+
+        if run_example "v3-cc" "V3-CC Secure Inference"; then
+            RESULTS+=("V3-CC: PASS")
+        else
+            RESULTS+=("V3-CC: FAIL")
+        fi
     fi
 fi
 

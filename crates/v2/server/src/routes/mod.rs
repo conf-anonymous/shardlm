@@ -110,7 +110,7 @@ pub fn create_router(state: AppState) -> Router {
     // =================================================================
     // V3-MPC: True MPC with Beaver triples (no plaintext reconstruction)
     // =================================================================
-    #[cfg(feature = "mpc-secure")]
+    #[cfg(all(feature = "mpc-secure", feature = "cuda"))]
     let router = router
         .route("/v3/mpc/info", get(secure_inference_mpc::mpc_info))
         .route("/v3/mpc/prefill", post(secure_inference_mpc::mpc_prefill));
