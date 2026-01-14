@@ -6,13 +6,7 @@ This guide provides step-by-step instructions for running each ShardLM protocol 
 
 Before running any version, ensure you have:
 
-1. **Built the server and client**:
-   ```bash
-   cargo build -p shardlm-v2-server --features cuda --release
-   cargo build -p shardlm-v2-client --release
-   ```
-
-2. **Downloaded model weights** (Qwen 2.5 1.5B recommended for testing):
+1. **Downloaded model weights** (Qwen 2.5 1.5B recommended for testing):
    ```bash
    pip install huggingface_hub
    python -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen2.5-1.5B-Instruct', local_dir='/workspace/qwen2.5-1.5b-instruct-weights')"
@@ -33,6 +27,16 @@ Before running any version, ensure you have:
 ## V2: GPU-Accelerated Secret Sharing
 
 V2 uses additive secret sharing for linear operations with server-side reconstruction for nonlinear operations. This is the fastest version but provides partial security.
+
+### Build
+
+```bash
+# Build server with CUDA support
+cargo build -p shardlm-v2-server --features cuda --release
+
+# Build client
+cargo build -p shardlm-v2-client --release
+```
 
 ### Start the Server
 
@@ -91,9 +95,19 @@ Timing:
 
 V3 minimizes GPU-to-CPU transfers by keeping intermediate states on the GPU. Security properties are similar to V2.
 
-### Start the Server
+### Build
 
-Same as V2 (the server supports all V3 endpoints):
+Same as V2 (the server binary supports V2, V3, and V3-OT endpoints):
+
+```bash
+# Build server with CUDA support
+cargo build -p shardlm-v2-server --features cuda --release
+
+# Build client
+cargo build -p shardlm-v2-client --release
+```
+
+### Start the Server
 
 ```bash
 SHARDLM_V2_MODEL_DIR=/workspace/qwen2.5-1.5b-instruct-weights \
@@ -154,6 +168,20 @@ V3-CC uses NVIDIA H100 Confidential Computing mode for hardware-encrypted GPU me
 
 - **NVIDIA H100 GPU** with Confidential Computing support
 - CC mode enabled in GPU firmware
+
+### Build
+
+V3-CC requires the `h100-cc` feature flag:
+
+```bash
+# Build server with H100 Confidential Computing support
+cargo build -p shardlm-v2-server --features h100-cc,cuda --release
+
+# Build client
+cargo build -p shardlm-v2-client --release
+```
+
+**Note:** The `h100-cc` feature enables the `/v3/cc/*` endpoints. Without this flag, these endpoints will return 404.
 
 ### Start the Server
 
@@ -230,6 +258,20 @@ Timing:
 
 V3-MPC uses Beaver triples for secure multiplication, ensuring the server never sees plaintext activations. Uses polynomial approximations for nonlinear functions (slight accuracy loss).
 
+### Build
+
+V3-MPC requires the `mpc-secure` feature flag:
+
+```bash
+# Build server with MPC support
+cargo build -p shardlm-v2-server --features mpc-secure,cuda --release
+
+# Build client
+cargo build -p shardlm-v2-client --release
+```
+
+**Note:** The `mpc-secure` feature enables the `/v3/mpc/*` endpoints. Without this flag, these endpoints will return 404.
+
 ### Start the Server
 
 ```bash
@@ -288,6 +330,18 @@ Timing:
 ## V3-OT: Oblivious Transfer
 
 V3-OT uses Oblivious Transfer for nonlinear operations via precomputed function tables. Provides information-theoretic security with constant 48 KB overhead.
+
+### Build
+
+Same as V2/V3 (V3-OT is included in the base CUDA build):
+
+```bash
+# Build server with CUDA support
+cargo build -p shardlm-v2-server --features cuda --release
+
+# Build client
+cargo build -p shardlm-v2-client --release
+```
 
 ### Start the Server
 

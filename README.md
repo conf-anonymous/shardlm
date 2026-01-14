@@ -405,7 +405,7 @@ cargo test -p shardlm-v2-core -p shardlm-v2-model
 ```bash
 # Requires CUDA toolkit installed
 
-# Build v2 server with CUDA
+# Build v2 server with CUDA (includes V2, V3, V3-OT endpoints)
 cargo build -p shardlm-v2-server --features cuda --release
 
 # Build v2 client
@@ -414,6 +414,23 @@ cargo build -p shardlm-v2-client --release
 # Build all v2 crates with CUDA
 cargo build -p shardlm-v2-core -p shardlm-v2-model -p shardlm-v2-server --features cuda --release
 ```
+
+#### Feature Flags for V3-CC and V3-MPC
+
+V3-CC and V3-MPC require additional feature flags to enable their endpoints:
+
+```bash
+# V3-CC: Confidential Computing (requires H100 GPU)
+cargo build -p shardlm-v2-server --features h100-cc,cuda --release
+
+# V3-MPC: Beaver triple-based MPC
+cargo build -p shardlm-v2-server --features mpc-secure,cuda --release
+
+# All features (V2, V3, V3-CC, V3-MPC, V3-OT)
+cargo build -p shardlm-v2-server --features h100-cc,mpc-secure,cuda --release
+```
+
+**Note:** Without the appropriate feature flags, the corresponding endpoints will return 404. See [docs/RUNNING_EACH_VERSION.md](docs/RUNNING_EACH_VERSION.md) for detailed build and run instructions for each protocol version.
 
 ### Common Pitfalls
 
