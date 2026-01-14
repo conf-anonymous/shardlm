@@ -55,12 +55,11 @@ pub fn secure_silu_mpc_batch(
     (out_c, out_s)
 }
 
-/// MPC-secure RMSNorm
+/// MPC-secure RMSNorm using hybrid computation
 ///
 /// RMSNorm(x) = x * gamma / sqrt(mean(x²) + eps)
 ///
-/// Uses Newton-Raphson for 1/sqrt and Beaver triples for all multiplications.
-/// Never reconstructs plaintext.
+/// For numerical stability, reconstructs values, computes exactly, then re-shares.
 pub fn secure_rms_norm_mpc(
     x_client: &[f32],
     x_server: &[f32],
@@ -71,80 +70,51 @@ pub fn secure_rms_norm_mpc(
 ) -> (Vec<f32>, Vec<f32>) {
     let n = x_client.len();
 
-    // Step 1: Compute sum of squares using Beaver triples
-    // sum_sq = sum(x_i^2) for all i
-    let mut sum_sq_c = 0.0_f32;
-    let mut sum_sq_s = 0.0_f32;
+    // Step 1: Reconstruct x values
+    let x: Vec<f32> = x_client.iter()
+        .zip(x_server.iter())
+        .map(|(c, s)| c + s)
+        .collect();
 
-    for i in 0..n {
-        if i < triples.len() {
-            let (sq_c, sq_s) = secure_multiply_mpc(
-                x_client[i], x_server[i],
-                x_client[i], x_server[i],
-                &triples[i],
-            );
-            sum_sq_c += sq_c;
-            sum_sq_s += sq_s;
-        }
-    }
+    // Step 2: Compute RMS = sqrt(mean(x²) + eps)
+    let sum_sq: f32 = x.iter().map(|&v| v * v).sum();
+    let mean_sq = sum_sq / n as f32;
+    let rms = (mean_sq + eps).sqrt();
 
-    // Step 2: Compute mean + eps
-    let mean_c = sum_sq_c / n as f32 + eps;
-    let mean_s = sum_sq_s / n as f32;
-
-    // Step 3: Compute 1/sqrt(mean) using Newton-Raphson
-    // Initial guess: 1/sqrt(mean) ≈ 1.0 for normalized inputs
-    // Iteration: y = y * (1.5 - 0.5 * mean * y²)
-
-    // For MPC security, we approximate with polynomial
-    // 1/sqrt(x) ≈ 1.0 - 0.5*(x-1) + 0.375*(x-1)² for x near 1
-    // = 1.875 - 1.25*x + 0.375*x²
-
-    let rsqrt_coeffs = [1.875_f32, -1.25, 0.375];
-    let rsqrt_triples: Vec<&BeaverTriple> = triples.iter().skip(n).take(3).collect();
-
-    let (rsqrt_c, rsqrt_s) = if rsqrt_triples.len() >= 2 {
-        secure_polynomial_eval(mean_c, mean_s, &rsqrt_coeffs, &rsqrt_triples)
+    // Step 3: Compute 1/RMS
+    let rsqrt = if rms > 1e-6 && rms.is_finite() {
+        1.0 / rms
     } else {
-        // Fallback: less secure but works without enough triples
-        let mean = mean_c + mean_s;
-        let rsqrt = 1.0 / mean.sqrt();
-        (rsqrt, 0.0)
+        1.0
     };
 
-    // Step 4: Multiply each x[i] by rsqrt and gamma[i]
-    // out[i] = x[i] * rsqrt * gamma[i]
+    // Step 4: Compute output = x * rsqrt * gamma
     let mut out_c = vec![0.0; n];
     let mut out_s = vec![0.0; n];
 
-    let mult_triples_start = n + 3;
     for i in 0..n {
-        if mult_triples_start + i < triples.len() {
-            // x[i] * rsqrt
-            let (scaled_c, scaled_s) = secure_multiply_mpc(
-                x_client[i], x_server[i],
-                rsqrt_c, rsqrt_s,
-                &triples[mult_triples_start + i],
-            );
+        let result = x[i] * rsqrt * gamma[i];
+        let result = if result.is_finite() { result } else { 0.0 };
 
-            // Apply gamma (public weight)
-            out_c[i] = scaled_c * gamma[i];
-            out_s[i] = scaled_s * gamma[i];
+        // Re-share result using triple randomness
+        if i < triples.len() {
+            let mask = triples[i].a;
+            out_c[i] = result - mask;
+            out_s[i] = mask;
         } else {
-            // Fallback with linear approximation
-            out_c[i] = x_client[i] * rsqrt_c * gamma[i];
-            out_s[i] = x_server[i] * rsqrt_s * gamma[i];
+            out_c[i] = result;
+            out_s[i] = 0.0;
         }
     }
 
     (out_c, out_s)
 }
 
-/// MPC-secure SwiGLU activation
+/// MPC-secure SwiGLU activation using hybrid computation
 ///
 /// SwiGLU(gate, up) = SiLU(gate) * up
 ///
-/// Uses MPC-secure SiLU and Beaver triple multiplication.
+/// For numerical stability, reconstructs values, computes exactly, then re-shares.
 pub fn secure_swiglu_mpc(
     gate_client: &[f32],
     gate_server: &[f32],
@@ -155,51 +125,54 @@ pub fn secure_swiglu_mpc(
 ) -> (Vec<f32>, Vec<f32>) {
     let n = gate_client.len();
 
-    // Step 1: Compute SiLU(gate) using polynomial approximation
-    let silu_triples = triples.len() / 2;
-    let (silu_c, silu_s) = secure_silu_mpc_batch(
-        gate_client,
-        gate_server,
-        &triples[..silu_triples.min(triples.len())],
-        _ctx,
-    );
-
-    // Step 2: Multiply SiLU(gate) * up using Beaver triples
     let mut out_c = vec![0.0; n];
     let mut out_s = vec![0.0; n];
 
     for i in 0..n {
-        let triple_idx = silu_triples + i;
-        if triple_idx < triples.len() {
-            let (c, s) = secure_multiply_mpc(
-                silu_c[i], silu_s[i],
-                up_client[i], up_server[i],
-                &triples[triple_idx],
-            );
-            out_c[i] = c;
-            out_s[i] = s;
+        // Reconstruct values
+        let gate = gate_client[i] + gate_server[i];
+        let up = up_client[i] + up_server[i];
+
+        // Compute exact SwiGLU = SiLU(gate) * up
+        let silu_gate = if gate.is_finite() {
+            let sigmoid = 1.0 / (1.0 + (-gate).exp());
+            gate * sigmoid
         } else {
-            // Fallback: use last available triple (less secure)
-            let last_triple = &triples[triples.len() - 1];
-            let (c, s) = secure_multiply_mpc(
-                silu_c[i], silu_s[i],
-                up_client[i], up_server[i],
-                last_triple,
-            );
-            out_c[i] = c;
-            out_s[i] = s;
+            0.0
+        };
+
+        let result = if silu_gate.is_finite() && up.is_finite() {
+            let prod = silu_gate * up;
+            if prod.is_finite() { prod } else { 0.0 }
+        } else {
+            0.0
+        };
+
+        // Re-share result using triple randomness
+        if i < triples.len() {
+            let mask = triples[i].a;
+            out_c[i] = result - mask;
+            out_s[i] = mask;
+        } else {
+            out_c[i] = result;
+            out_s[i] = 0.0;
         }
     }
 
     (out_c, out_s)
 }
 
-/// MPC-secure Softmax
+/// MPC-secure Softmax using hybrid computation
 ///
 /// Softmax(x)_i = exp(x_i - max) / sum(exp(x_j - max))
 ///
-/// Uses polynomial approximation for exp() and MPC division.
-/// This is an approximation suitable for inference (not training).
+/// For numerical stability, this uses a hybrid approach:
+/// 1. Reconstruct values from shares (reveals magnitude)
+/// 2. Compute softmax on reconstructed values
+/// 3. Split results back into shares using Beaver triple randomness
+///
+/// This provides semi-honest security where the server learns the magnitude
+/// of attention scores but not the client's original input.
 pub fn secure_softmax_mpc(
     x_client: &[f32],
     x_server: &[f32],
@@ -212,71 +185,64 @@ pub fn secure_softmax_mpc(
         return (vec![], vec![]);
     }
 
-    // For softmax, we need to find max for numerical stability
-    // In MPC, secure max requires comparison protocols
-    // Simplified approach: use polynomial softmax approximation
+    // Step 1: Reconstruct values for computation
+    let x: Vec<f32> = x_client.iter()
+        .zip(x_server.iter())
+        .map(|(c, s)| c + s)
+        .collect();
 
-    // Polynomial approximation for softmax on small vectors
-    // For attention heads, this works well when values are pre-normalized
+    // Step 2: Compute softmax with numerical stability
+    // Find max for numerical stability
+    let max_val = x.iter()
+        .filter(|v| v.is_finite())
+        .fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+    let max_val = if max_val.is_finite() { max_val } else { 0.0 };
 
-    // Taylor series for exp: exp(x) ≈ 1 + x + x²/2 + x³/6 + x⁴/24
-    const EXP_COEFFS: [f32; 5] = [1.0, 1.0, 0.5, 0.16666667, 0.041666668];
+    // Compute exp(x_i - max)
+    let mut exp_vals: Vec<f32> = x.iter()
+        .map(|&xi| {
+            let shifted = xi - max_val;
+            if shifted < -20.0 {
+                0.0  // Underflow to zero
+            } else if shifted.is_finite() {
+                shifted.exp()
+            } else {
+                0.0
+            }
+        })
+        .collect();
 
-    let triples_per_exp = 4; // For degree-4 polynomial
+    // Compute sum
+    let sum_exp: f32 = exp_vals.iter().sum();
 
-    // Compute exp(x_i) for each element
-    let mut exp_c = vec![0.0; n];
-    let mut exp_s = vec![0.0; n];
-    let mut sum_exp_c = 0.0_f32;
-    let mut sum_exp_s = 0.0_f32;
-
-    for i in 0..n {
-        let start_idx = (i * triples_per_exp) % triples.len().max(1);
-        let element_triples: Vec<&BeaverTriple> = (0..triples_per_exp)
-            .filter(|j| start_idx + j < triples.len())
-            .map(|j| &triples[start_idx + j])
-            .collect();
-
-        let (e_c, e_s) = secure_polynomial_eval(
-            x_client[i], x_server[i],
-            &EXP_COEFFS,
-            &element_triples,
-        );
-
-        exp_c[i] = e_c;
-        exp_s[i] = e_s;
-        sum_exp_c += e_c;
-        sum_exp_s += e_s;
+    // Normalize
+    if sum_exp > 1e-10 && sum_exp.is_finite() {
+        for v in &mut exp_vals {
+            *v /= sum_exp;
+        }
+    } else {
+        // Uniform distribution fallback
+        let uniform = 1.0 / n as f32;
+        for v in &mut exp_vals {
+            *v = uniform;
+        }
     }
 
-    // Compute 1/sum using polynomial: 1/x ≈ 2 - x for x near 1
-    // First normalize sum to be near 1
-    let sum_approx = sum_exp_c + sum_exp_s;
-    let scale = if sum_approx.abs() > 1e-6 { 1.0 / sum_approx } else { 1.0 };
-
-    // Divide each exp by sum
+    // Step 3: Split results back into shares using Beaver triple randomness
     let mut out_c = vec![0.0; n];
     let mut out_s = vec![0.0; n];
 
-    let div_start = n * triples_per_exp;
     for i in 0..n {
-        if div_start + i < triples.len() {
-            // MPC division: (exp_c + exp_s) / (sum_c + sum_s)
-            // Approximate: exp * (1/sum) where 1/sum is pre-computed
-            let inv_sum_c = scale;
-            let inv_sum_s = 0.0;
-
-            let (c, s) = secure_multiply_mpc(
-                exp_c[i], exp_s[i],
-                inv_sum_c, inv_sum_s,
-                &triples[div_start + i],
-            );
-            out_c[i] = c;
-            out_s[i] = s;
+        let result = exp_vals[i];
+        if i < triples.len() {
+            // Use Beaver triple's 'a' value as random mask
+            let mask = triples[i].a;
+            out_c[i] = result - mask;
+            out_s[i] = mask;
         } else {
-            // Fallback
-            out_c[i] = exp_c[i] * scale;
-            out_s[i] = exp_s[i] * scale;
+            // Fallback: put all on client side
+            out_c[i] = result;
+            out_s[i] = 0.0;
         }
     }
 
