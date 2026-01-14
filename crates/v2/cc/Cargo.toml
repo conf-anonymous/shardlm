@@ -8,8 +8,8 @@ description = "H100 Confidential Computing integration for ShardLM"
 
 [features]
 default = []
-# Enable NVIDIA CC SDK (requires SDK installation)
-nvidia-cc = []
+# Enable NVIDIA H100 CC (uses hardware encryption when CC mode ON, software AES-GCM when OFF)
+nvidia-cc = ["dep:aes-gcm"]
 # Software fallback (AES-GCM encryption on GPU)
 software-cc = ["dep:aes-gcm"]
 

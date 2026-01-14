@@ -181,23 +181,45 @@ impl ConfidentialCompute for NoOpCcProvider {
 /// Get the appropriate CC provider for the current system
 ///
 /// Tries providers in order of preference:
-/// 1. NVIDIA CC (if available and feature enabled)
-/// 2. Software CC (AES-GCM fallback, if feature enabled)
+/// 1. NVIDIA H100 CC (hardware or software fallback, if feature enabled)
+/// 2. Software CC (AES-GCM, if feature enabled)
 /// 3. NoOp (passthrough, for development)
+///
+/// Note: NVIDIA CC provider handles both hardware CC (when ON) and
+/// software fallback (when CC is OFF but GPU is capable).
 pub fn get_cc_provider(device: Arc<CudaDevice>) -> Result<Box<dyn ConfidentialCompute>> {
     #[cfg(feature = "nvidia-cc")]
     {
-        if let Ok(provider) = nvidia_cc::NvidiaCcProvider::new(device.clone()) {
-            if provider.is_available() {
-                tracing::info!("Using NVIDIA Confidential Computing");
-                return Ok(Box::new(provider));
+        match nvidia_cc::NvidiaCcProvider::new(device.clone()) {
+            Ok(provider) => {
+                if provider.is_available() {
+                    let status = provider.get_cc_status();
+                    match status {
+                        nvidia_cc::CcStatus::On => {
+                            tracing::info!("Using NVIDIA H100 Confidential Computing (Hardware CC ON)");
+                        }
+                        nvidia_cc::CcStatus::OffCapable => {
+                            tracing::warn!(
+                                "H100 CC capable but OFF. Using software fallback. \
+                                 Enable hardware CC with: sudo nvidia-smi conf-compute -srs 1"
+                            );
+                        }
+                        _ => {
+                            tracing::info!("Using NVIDIA H100 CC with software fallback");
+                        }
+                    }
+                    return Ok(Box::new(provider));
+                }
+            }
+            Err(e) => {
+                tracing::debug!("NVIDIA CC not available: {}", e);
             }
         }
     }
 
     #[cfg(feature = "software-cc")]
     {
-        tracing::info!("Using software CC (AES-GCM fallback)");
+        tracing::info!("Using software CC (AES-GCM)");
         return Ok(Box::new(software_cc::SoftwareCcProvider::new(device)?));
     }
 
