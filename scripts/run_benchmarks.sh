@@ -253,6 +253,7 @@ run_inference_benchmark() {
     local endpoint="$1"
     local description="$2"
     local output_file="$RUN_DIR/${endpoint}_benchmark.txt"
+    local json_file="$RUN_DIR/${endpoint}_benchmark.json"
 
     print_step "Benchmarking $description..."
     print_info "Output: $output_file"
@@ -260,7 +261,7 @@ run_inference_benchmark() {
     {
         echo "Benchmark: $description"
         echo "Endpoint: $endpoint"
-        echo "Iterations: $BENCHMARK_ITERATIONS"
+        echo "Runs: $BENCHMARK_ITERATIONS"
         echo "Max Tokens: $MAX_TOKENS"
         echo "Timestamp: $(date)"
         echo ""
@@ -268,13 +269,15 @@ run_inference_benchmark() {
         echo "--------"
     } > "$output_file"
 
-    # Run benchmark with client
+    # Run benchmark with client (correct flags: --runs, -e, -m, -o)
     if ./target/release/shardlm-v2-client benchmark \
         -s "$SERVER_URL" \
-        --endpoint "$endpoint" \
-        --iterations "$BENCHMARK_ITERATIONS" \
-        --max-tokens "$MAX_TOKENS" \
-        --tokenizer "$MODEL_DIR/tokenizer.json" 2>&1 | tee -a "$output_file"; then
+        -e "$endpoint" \
+        -r "$BENCHMARK_ITERATIONS" \
+        -m "$MAX_TOKENS" \
+        -w 3 \
+        -o "$json_file" \
+        --raw 2>&1 | tee -a "$output_file"; then
         print_success "$description benchmark completed"
         return 0
     else

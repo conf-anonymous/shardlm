@@ -1,0 +1,13 @@
+Benchmark: V3-CC Secure Inference
+Endpoint: v3-cc
+Iterations: 20
+Max Tokens: 50
+Timestamp: Wed Jan 14 22:29:34 UTC 2026
+
+Results:
+--------
+error: unexpected argument '--iterations' found
+
+Usage: shardlm-v2-client benchmark --server-url <SERVER_URL> --endpoint <ENDPOINT>
+
+For more information, try '--help'.

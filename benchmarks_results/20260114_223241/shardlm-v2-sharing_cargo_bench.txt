@@ -1,0 +1,307 @@
+Cargo Benchmark: Secret Sharing
+Package: shardlm-v2-sharing
+Features: --features cuda
+Timestamp: Wed Jan 14 22:32:42 UTC 2026
+
+Results:
+--------
+warning: unused import: `CudaSlice`
+  --> crates/v2/core/src/kernel.rs:21:22
+   |
+21 | use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
+   |                      ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `cudarc::nvrtc::Ptx`
+  --> crates/v2/core/src/kernel.rs:23:5
+   |
+23 | use cudarc::nvrtc::Ptx;
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::sync::Arc`
+  --> crates/v2/core/src/kernel.rs:25:5
+   |
+25 | use std::sync::Arc;
+   |     ^^^^^^^^^^^^^^
+
+warning: unused import: `cudarc::driver::DeviceRepr`
+   --> crates/v2/core/src/kernel.rs:855:13
+    |
+855 |         use cudarc::driver::DeviceRepr;
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unnecessary parentheses around assigned value
+   --> crates/v2/core/src/parallel.rs:371:30
+    |
+371 |             let shard_rows = (end - start);
+    |                              ^           ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+371 -             let shard_rows = (end - start);
+371 +             let shard_rows = end - start;
+    |
+
+warning: unnecessary `unsafe` block
+   --> crates/v2/core/src/gpu.rs:406:9
+    |
+406 |         unsafe {
+    |         ^^^^^^ unnecessary `unsafe` block
+    |
+    = note: `#[warn(unused_unsafe)]` (part of `#[warn(unused)]`) on by default
+
+warning: unnecessary `unsafe` block
+   --> crates/v2/core/src/kernel.rs:861:9
+    |
+861 |         unsafe {
+    |         ^^^^^^ unnecessary `unsafe` block
+
+warning: unused variable: `n`
+   --> crates/v2/core/src/kernel.rs:857:13
+    |
+857 |         let n = src.shape.iter().product::<usize>();
+    |             ^ help: if this is intentional, prefix it with an underscore: `_n`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `heads_per_gpu`
+   --> crates/v2/core/src/parallel.rs:172:13
+    |
+172 |         let heads_per_gpu = num_heads / num_gpus;
+    |             ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_heads_per_gpu`
+
+warning: unused variable: `intermediate_per_gpu`
+   --> crates/v2/core/src/parallel.rs:173:13
+    |
+173 |         let intermediate_per_gpu = intermediate_dim / num_gpus;
+    |             ^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_intermediate_per_gpu`
+
+warning: unused variable: `shard_rows`
+   --> crates/v2/core/src/parallel.rs:371:17
+    |
+371 |             let shard_rows = (end - start);
+    |                 ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_shard_rows`
+
+warning: field `staging_buffers` is never read
+  --> crates/v2/core/src/comm.rs:64:5
+   |
+58 | pub struct GpuCommunicator {
+   |            --------------- field in this struct
+...
+64 |     staging_buffers: Vec<Vec<u8>>,
+   |     ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: hiding a lifetime that's elided elsewhere is confusing
+   --> crates/v2/core/src/gpu.rs:347:20
+    |
+347 |     pub fn reshape(&self, new_shape: Vec<usize>) -> Result<CudaTensorView> {
+    |                    ^^^^^ the lifetime is elided here       ^^^^^^^^^^^^^^ the same lifetime is hidden here
+    |
+    = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+    = note: `#[warn(mismatched_lifetime_syntaxes)]` on by default
+help: use `'_` for type paths
+    |
+347 |     pub fn reshape(&self, new_shape: Vec<usize>) -> Result<CudaTensorView<'_>> {
+    |                                                                          ++++
+
+warning: `shardlm-v2-core` (lib) generated 13 warnings (run `cargo fix --lib -p shardlm-v2-core` to apply 10 suggestions)
+warning: unused import: `SharingError`
+ --> crates/v2/sharing/src/attention.rs:8:28
+  |
+8 | use crate::error::{Result, SharingError};
+  |                            ^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `DType`
+  --> crates/v2/sharing/src/attention.rs:10:31
+   |
+10 | use shardlm_v2_core::tensor::{DType, Device};
+   |                               ^^^^^
+
+warning: unused import: `SharingError`
+  --> crates/v2/sharing/src/secure_ffn.rs:16:28
+   |
+16 | use crate::error::{Result, SharingError};
+   |                            ^^^^^^^^^^^^
+
+warning: unused import: `super::*`
+   --> crates/v2/sharing/src/secure_ffn.rs:218:9
+    |
+218 |     use super::*;
+    |         ^^^^^^^^
+
+warning: unused import: `std::sync::Arc`
+   --> crates/v2/sharing/src/secure_linear.rs:135:9
+    |
+135 |     use std::sync::Arc;
+    |         ^^^^^^^^^^^^^^
+
+warning: unused import: `secure_multiply_mpc`
+  --> crates/v2/sharing/src/secure_nonlinear_mpc.rs:23:21
+   |
+23 | use crate::beaver::{secure_multiply_mpc, BeaverTriple, BeaverTripleStore};
+   |                     ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `secure_polynomial_eval`
+  --> crates/v2/sharing/src/secure_nonlinear_mpc.rs:24:32
+   |
+24 | use crate::secure_polynomial::{secure_polynomial_eval, secure_silu_mpc};
+   |                                ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::ServerContext`
+  --> crates/v2/sharing/src/secure_nonlinear_gpu.rs:16:5
+   |
+16 | use crate::ServerContext;
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `ClientShare`, `SecureSharePair`, and `ServerShare`
+   --> crates/v2/sharing/src/security_assertions.rs:297:40
+    |
+297 |     use crate::secure::{ServerContext, ServerShare, ClientShare, SecureSharePair};
+    |                                        ^^^^^^^^^^^  ^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: use of deprecated function `secure_nonlinear::secure_attention_approx`: INSECURE: operates on plaintext. Use MPC-secure attention that keeps K,V as shares.
+  --> crates/v2/sharing/src/lib.rs:58:5
+   |
+58 |     secure_attention_approx, secure_rms_norm_approx, secure_silu_approx,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated function `secure_nonlinear::secure_rms_norm_approx`: INSECURE: reconstructs plaintext. Use secure_rms_norm_mpc for MPC-secure computation.
+  --> crates/v2/sharing/src/lib.rs:58:30
+   |
+58 |     secure_attention_approx, secure_rms_norm_approx, secure_silu_approx,
+   |                              ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated function `secure_nonlinear::secure_silu_approx`: INSECURE: reconstructs plaintext. Use secure_silu_mpc for MPC-secure computation.
+  --> crates/v2/sharing/src/lib.rs:58:54
+   |
+58 |     secure_attention_approx, secure_rms_norm_approx, secure_silu_approx,
+   |                                                      ^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated function `secure_nonlinear::secure_softmax_approx`: INSECURE: reconstructs plaintext. Use secure_softmax_mpc for MPC-secure computation.
+  --> crates/v2/sharing/src/lib.rs:59:5
+   |
+59 |     secure_softmax_approx, secure_swiglu_approx,
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated function `secure_nonlinear::secure_swiglu_approx`: INSECURE: reconstructs plaintext. Use secure_swiglu_mpc for MPC-secure computation.
+  --> crates/v2/sharing/src/lib.rs:59:28
+   |
+59 |     secure_softmax_approx, secure_swiglu_approx,
+   |                            ^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated function `secure_nonlinear::secure_softmax_approx`: INSECURE: reconstructs plaintext. Use secure_softmax_mpc for MPC-secure computation.
+   --> crates/v2/sharing/src/secure_nonlinear.rs:324:33
+    |
+324 |         let (attn_weights, _) = secure_softmax_approx(&scores_c, &scores_s, ctx);
+    |                                 ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `t1`
+   --> crates/v2/sharing/src/beaver.rs:297:13
+    |
+297 |         let t1 = store.get_triple(1);
+    |             ^^ help: if this is intentional, prefix it with an underscore: `_t1`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+  --> crates/v2/sharing/src/secure_nonlinear.rs:91:9
+   |
+91 |     let mut result_s = 0.0;
+   |         ----^^^^^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `max_seq_len`, `device`, and `use_flash_attention` are never read
+  --> crates/v2/sharing/src/attention.rs:21:5
+   |
+13 | pub struct GpuAttention {
+   |            ------------ fields in this struct
+...
+21 |     max_seq_len: usize,
+   |     ^^^^^^^^^^^
+22 |     /// Device to use
+23 |     device: Device,
+   |     ^^^^^^
+24 |     /// Use flash attention
+25 |     use_flash_attention: bool,
+   |     ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `device` is never read
+   --> crates/v2/sharing/src/share.rs:105:5
+    |
+101 | pub struct SharingContext {
+    |            -------------- field in this struct
+...
+105 |     device: Device,
+    |     ^^^^^^
+
+warning: `shardlm-v2-sharing` (lib test) generated 19 warnings (run `cargo fix --lib -p shardlm-v2-sharing --tests` to apply 11 suggestions)
+    Finished `bench` profile [optimized] target(s) in 0.15s
+     Running unittests src/lib.rs (target/release/deps/shardlm_v2_sharing-c327529afe7ba701)
+
+running 50 tests
+test attention::tests::test_attention_cpu ... ignored
+test attention::tests::test_gqa_ratio ... ignored
+test beaver::tests::test_beaver_triple_correctness ... ignored
+test beaver::tests::test_secure_multiply_correctness ... ignored
+test beaver::tests::test_triple_store ... ignored
+test secure::tests::test_server_context_cannot_reconstruct ... ignored
+test secure::tests::test_share_and_reconstruct ... ignored
+test secure::tests::test_shares_are_different_from_plaintext ... ignored
+test secure_attention::tests::test_client_attention_weights ... ignored
+test secure_attention::tests::test_full_attention_flow ... ignored
+test secure_attention::tests::test_qkv_projection ... ignored
+test secure_attention::tests::test_server_never_sees_softmax ... ignored
+test secure_ffn::tests::test_ffn_full_flow ... ignored
+test secure_ffn::tests::test_rmsnorm ... ignored
+test secure_ffn::tests::test_server_cannot_compute_silu ... ignored
+test secure_ffn::tests::test_silu ... ignored
+test secure_ffn::tests::test_swiglu ... ignored
+test secure_linear::tests::test_secure_linear_correctness ... ignored
+test secure_linear::tests::test_shares_are_not_plaintext ... ignored
+test secure_nonlinear::tests::test_secure_rms_norm ... ignored
+test secure_nonlinear::tests::test_secure_silu_approx ... ignored
+test secure_nonlinear::tests::test_secure_softmax ... ignored
+test secure_nonlinear_gpu::tests::test_module_exists ... ignored
+test secure_nonlinear_mpc::tests::test_secure_rms_norm_mpc ... ignored
+test secure_nonlinear_mpc::tests::test_secure_silu_mpc ... ignored
+test secure_nonlinear_mpc::tests::test_triple_count ... ignored
+test secure_nonlinear_mpc_gpu::tests::test_mpc_inference_state ... ignored
+test secure_nonlinear_mpc_gpu::tests::test_triple_calculation ... ignored
+test secure_nonlinear_mpc_gpu::tests::test_vec_interface_rmsnorm ... ignored
+test secure_nonlinear_mpc_gpu::tests::test_vec_interface_swiglu ... ignored
+test secure_nonlinear_ot::tests::test_ot_function_table ... ignored
+test secure_nonlinear_ot::tests::test_secure_rms_norm_ot ... ignored
+test secure_nonlinear_ot::tests::test_secure_silu_ot ... ignored
+test secure_nonlinear_ot::tests::test_standard_tables ... ignored
+test secure_ot::tests::test_embedding_to_shares ... ignored
+test secure_ot::tests::test_shares_are_different ... ignored
+test secure_ot::tests::test_sum_embeddings ... ignored
+test secure_polynomial::tests::test_polynomial_eval ... ignored
+test secure_polynomial::tests::test_silu_approximation ... ignored
+test security_assertions::compile_time_security_tests::test_cannot_create_share_pair_externally ... ignored
+test security_assertions::compile_time_security_tests::test_server_context_has_no_reconstruct ... ignored
+test security_assertions::tests::test_assert_not_plaintext_fails_on_same ... ignored
+test security_assertions::tests::test_assert_not_plaintext_passes_on_different ... ignored
+test security_assertions::tests::test_assert_shares_differ_fails_on_same ... ignored
+test security_assertions::tests::test_assert_shares_differ_passes_on_different ... ignored
+test security_assertions::tests::test_security_auditor_fails_with_violation ... ignored
+test security_assertions::tests::test_security_auditor_passes_clean ... ignored
+test security_assertions::tests::test_security_mode_disable ... ignored
+test share::tests::test_bf16_sharing ... ignored
+test share::tests::test_share_and_reconstruct ... ignored
+
+test result: ok. 0 passed; 0 failed; 50 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

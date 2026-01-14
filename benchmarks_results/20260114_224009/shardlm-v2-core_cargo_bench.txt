@@ -1,0 +1,141 @@
+Cargo Benchmark: Core Operations
+Package: shardlm-v2-core
+Features: --features cuda
+Timestamp: Wed Jan 14 22:40:09 UTC 2026
+
+Results:
+--------
+warning: unused import: `CudaSlice`
+  --> crates/v2/core/src/kernel.rs:21:22
+   |
+21 | use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
+   |                      ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `cudarc::nvrtc::Ptx`
+  --> crates/v2/core/src/kernel.rs:23:5
+   |
+23 | use cudarc::nvrtc::Ptx;
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::sync::Arc`
+  --> crates/v2/core/src/kernel.rs:25:5
+   |
+25 | use std::sync::Arc;
+   |     ^^^^^^^^^^^^^^
+
+warning: unused import: `cudarc::driver::DeviceRepr`
+   --> crates/v2/core/src/kernel.rs:855:13
+    |
+855 |         use cudarc::driver::DeviceRepr;
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unnecessary parentheses around assigned value
+   --> crates/v2/core/src/parallel.rs:371:30
+    |
+371 |             let shard_rows = (end - start);
+    |                              ^           ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+371 -             let shard_rows = (end - start);
+371 +             let shard_rows = end - start;
+    |
+
+warning: unnecessary `unsafe` block
+   --> crates/v2/core/src/gpu.rs:406:9
+    |
+406 |         unsafe {
+    |         ^^^^^^ unnecessary `unsafe` block
+    |
+    = note: `#[warn(unused_unsafe)]` (part of `#[warn(unused)]`) on by default
+
+warning: unnecessary `unsafe` block
+   --> crates/v2/core/src/kernel.rs:861:9
+    |
+861 |         unsafe {
+    |         ^^^^^^ unnecessary `unsafe` block
+
+warning: unused variable: `n`
+   --> crates/v2/core/src/kernel.rs:857:13
+    |
+857 |         let n = src.shape.iter().product::<usize>();
+    |             ^ help: if this is intentional, prefix it with an underscore: `_n`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `heads_per_gpu`
+   --> crates/v2/core/src/parallel.rs:172:13
+    |
+172 |         let heads_per_gpu = num_heads / num_gpus;
+    |             ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_heads_per_gpu`
+
+warning: unused variable: `intermediate_per_gpu`
+   --> crates/v2/core/src/parallel.rs:173:13
+    |
+173 |         let intermediate_per_gpu = intermediate_dim / num_gpus;
+    |             ^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_intermediate_per_gpu`
+
+warning: unused variable: `shard_rows`
+   --> crates/v2/core/src/parallel.rs:371:17
+    |
+371 |             let shard_rows = (end - start);
+    |                 ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_shard_rows`
+
+warning: field `staging_buffers` is never read
+  --> crates/v2/core/src/comm.rs:64:5
+   |
+58 | pub struct GpuCommunicator {
+   |            --------------- field in this struct
+...
+64 |     staging_buffers: Vec<Vec<u8>>,
+   |     ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: hiding a lifetime that's elided elsewhere is confusing
+   --> crates/v2/core/src/gpu.rs:347:20
+    |
+347 |     pub fn reshape(&self, new_shape: Vec<usize>) -> Result<CudaTensorView> {
+    |                    ^^^^^ the lifetime is elided here       ^^^^^^^^^^^^^^ the same lifetime is hidden here
+    |
+    = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+    = note: `#[warn(mismatched_lifetime_syntaxes)]` on by default
+help: use `'_` for type paths
+    |
+347 |     pub fn reshape(&self, new_shape: Vec<usize>) -> Result<CudaTensorView<'_>> {
+    |                                                                          ++++
+
+warning: `shardlm-v2-core` (lib test) generated 13 warnings (run `cargo fix --lib -p shardlm-v2-core --tests` to apply 10 suggestions)
+    Finished `bench` profile [optimized] target(s) in 0.15s
+     Running unittests src/lib.rs (target/release/deps/shardlm_v2_core-8a57707ac69cfab0)
+
+running 23 tests
+test comm::tests::test_comm_op_types ... ignored
+test gpu::tests::test_cuda_tensor_f32 ... ignored
+test gpu::tests::test_gpu_device_creation ... ignored
+test kernel::tests::test_kernel_context_debug ... ignored
+test memory::tests::test_memory_estimator_bf16 ... ignored
+test memory::tests::test_memory_estimator_int8 ... ignored
+test memory::tests::test_memory_fits_4x_a10g_int8 ... ignored
+test memory::tests::test_offload_config ... ignored
+test memory::tests::test_pipeline_config_balanced ... ignored
+test model::tests::test_llama_70b_config ... ignored
+test model::tests::test_model_size_70b ... ignored
+test parallel::tests::test_architecture_params ... ignored
+test parallel::tests::test_sharding_plan_llama_70b ... ignored
+test parallel::tests::test_sharding_plan_qwen_7b ... ignored
+test parallel::tests::test_sharding_plan_qwen_7b_2gpu ... ignored
+test parallel::tests::test_slice_tensor_col ... ignored
+test parallel::tests::test_slice_tensor_row ... ignored
+test quantization::tests::test_per_tensor_quantization ... ignored
+test quantization::tests::test_quantize_dequantize_roundtrip ... ignored
+test quantization::tests::test_quantize_per_channel ... ignored
+test tensor::tests::test_broadcast ... ignored
+test tensor::tests::test_strides ... ignored
+test tensor::tests::test_tensor_creation ... ignored
+
+test result: ok. 0 passed; 0 failed; 23 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

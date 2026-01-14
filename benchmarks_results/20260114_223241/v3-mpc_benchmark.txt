@@ -1,0 +1,55 @@
+Benchmark: V3-MPC Secure Inference
+Endpoint: v3-mpc
+Runs: 5
+Max Tokens: 50
+Timestamp: Wed Jan 14 22:36:08 UTC 2026
+
+Results:
+--------
+ShardLM V2 Benchmark
+========================================
+
+Starting benchmark...
+  Server:  http://localhost:9090
+  Model:   Qwen2_5_1_5B
+  GPU:     Unknown GPU
+  Prompt:  19 tokens
+  Runs:    5 (+ 3 warmup)
+
+Running 3 warmup iterations...
+  Warmup 1/3  Warmup 2/3  Warmup 3/3  Warmup complete.        
+Running 5 benchmark iterations...
+
+========================================
+Benchmark Results
+========================================
+Model:     Qwen2_5_1_5B
+GPU:       Unknown GPU
+Version:   v3-mpc
+Endpoint:  /v3/mpc/prefill
+Timestamp: 2026-01-14 22:36:14 UTC
+
+Configuration:
+  Prompt tokens:   19
+  Max new tokens:  50
+  Temperature:     0.70
+  Runs:            5
+  Warmup:          3
+
+Prefill (prompt processing):
+  Mean:      613.2 ms
+  Std:        56.4 ms
+  Min:       546.0 ms
+  Max:       676.4 ms
+  P50:       628.4 ms
+  P95:       676.4 ms
+  P99:       676.4 ms
+
+Total (end-to-end):
+  Mean:      623.4 ms
+  Std:        56.1 ms
+  P95:       686.2 ms
+  Tokens/sec: 31.0
+========================================
+
+Results saved to: /workspace/shardlm/benchmarks_results/20260114_223241/v3-mpc_benchmark.json

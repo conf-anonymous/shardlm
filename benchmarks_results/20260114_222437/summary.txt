@@ -1,0 +1,29 @@
+ShardLM Benchmark Summary
+=========================
+
+Run: 20260114_222437
+GPU: NVIDIA H100 80GB HBM3
+Model: qwen2_5_1_5b
+
+Results:
+  - Sharing/Crypto Benchmarks: DONE
+  - V2 Inference: DONE
+  - V3 Inference: DONE
+  - V3-OT Inference: DONE
+  - V3-MPC Inference: DONE
+  - V3-CC Inference: DONE
+
+Output files:
+total 60
+drwxr-xr-x 2 root root  4096 Jan 14 22:29 .
+drwxr-xr-x 3 root root    29 Jan 14 22:24 ..
+-rw-r--r-- 1 root root  2692 Jan 14 22:25 shardlm-ot_cargo_bench.txt
+-rw-r--r-- 1 root root  6904 Jan 14 22:24 shardlm-v2-core_cargo_bench.txt
+-rw-r--r-- 1 root root 13504 Jan 14 22:24 shardlm-v2-sharing_cargo_bench.txt
+-rw-r--r-- 1 root root   307 Jan 14 22:29 summary.txt
+-rw-r--r-- 1 root root  2022 Jan 14 22:24 system_info.txt
+-rw-r--r-- 1 root root   302 Jan 14 22:26 v2_benchmark.txt
+-rw-r--r-- 1 root root   308 Jan 14 22:29 v3-cc_benchmark.txt
+-rw-r--r-- 1 root root   310 Jan 14 22:28 v3-mpc_benchmark.txt
+-rw-r--r-- 1 root root   308 Jan 14 22:27 v3-ot_benchmark.txt
+-rw-r--r-- 1 root root   313 Jan 14 22:26 v3_benchmark.txt

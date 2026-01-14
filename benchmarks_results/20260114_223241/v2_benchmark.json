@@ -1,0 +1,88 @@
+{
+  "model": "Qwen2_5_1_5B",
+  "gpu": "Unknown GPU",
+  "version": "v2",
+  "endpoint": "/v2/secure/gpu/prefill_v2",
+  "timestamp": "2026-01-14T22:33:51.167450270Z",
+  "config": {
+    "prompt": "Hello, how are you?",
+    "prompt_tokens": 19,
+    "max_new_tokens": 50,
+    "temperature": 0.7,
+    "runs": 5,
+    "warmup": 3,
+    "endpoint": "v2"
+  },
+  "results": {
+    "embedding": {
+      "mean_ms": 9.892775799999999,
+      "std_ms": 0.8956819894028011,
+      "min_ms": 9.113857,
+      "max_ms": 11.560882,
+      "p50_ms": 9.480683,
+      "p95_ms": 11.560882,
+      "p99_ms": 11.560882
+    },
+    "prefill": {
+      "mean_ms": 504.956197,
+      "std_ms": 32.54021752965677,
+      "min_ms": 443.264178,
+      "max_ms": 528.642761,
+      "p50_ms": 524.631343,
+      "p95_ms": 528.642761,
+      "p99_ms": 528.642761
+    },
+    "total": {
+      "mean_ms": 514.8497636000001,
+      "std_ms": 32.760881381683795,
+      "min_ms": 452.74566500000003,
+      "max_ms": 540.204523,
+      "p50_ms": 533.7460659999999,
+      "p95_ms": 540.204523,
+      "p99_ms": 540.204523
+    },
+    "tokens_per_second": 37.627026092324606
+  },
+  "raw_timings": [
+    {
+      "embedding_ms": 9.242945,
+      "prefill_ms": 527.764276,
+      "decode_ms": 0.0,
+      "total_ms": 537.0080270000001,
+      "tokens_generated": 19,
+      "tokens_per_second": 0.0
+    },
+    {
+      "embedding_ms": 11.560882,
+      "prefill_ms": 528.642761,
+      "decode_ms": 0.0,
+      "total_ms": 540.204523,
+      "tokens_generated": 19,
+      "tokens_per_second": 0.0
+    },
+    {
+      "embedding_ms": 9.480683,
+      "prefill_ms": 443.264178,
+      "decode_ms": 0.0,
+      "total_ms": 452.74566500000003,
+      "tokens_generated": 19,
+      "tokens_per_second": 0.0
+    },
+    {
+      "embedding_ms": 9.113857,
+      "prefill_ms": 524.631343,
+      "decode_ms": 0.0,
+      "total_ms": 533.7460659999999,
+      "tokens_generated": 19,
+      "tokens_per_second": 0.0
+    },
+    {
+      "embedding_ms": 10.065512,
+      "prefill_ms": 500.478427,
+      "decode_ms": 0.0,
+      "total_ms": 510.54453700000005,
+      "tokens_generated": 19,
+      "tokens_per_second": 0.0
+    }
+  ]
+}

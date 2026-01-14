@@ -1,0 +1,55 @@
+Cargo Benchmark: Oblivious Transfer
+Package: shardlm-ot
+Features: 
+Timestamp: Wed Jan 14 22:24:57 UTC 2026
+
+Results:
+--------
+   Compiling syn v2.0.111
+   Compiling once_cell v1.21.3
+   Compiling rand_chacha v0.3.1
+   Compiling rand_chacha v0.9.0
+   Compiling rand v0.8.5
+   Compiling tempfile v3.23.0
+   Compiling rusty-fork v0.3.1
+   Compiling proptest v1.9.0
+   Compiling thiserror-impl v1.0.69
+   Compiling zeroize_derive v1.4.2
+   Compiling curve25519-dalek-derive v0.1.1
+   Compiling zeroize v1.8.2
+   Compiling curve25519-dalek v4.1.3
+   Compiling thiserror v1.0.69
+   Compiling shardlm-fixed-point v0.1.0 (/workspace/shardlm/crates/fixed_point)
+   Compiling shardlm-protocol v0.1.0 (/workspace/shardlm/crates/protocol)
+   Compiling shardlm-ot v0.1.0 (/workspace/shardlm/crates/ot)
+    Finished `bench` profile [optimized] target(s) in 6.49s
+     Running unittests src/lib.rs (target/release/deps/shardlm_ot-d5658332c4b69830)
+
+running 24 tests
+test adversarial_tests::tests::test_batch_size_exceeded_rejected ... ignored
+test adversarial_tests::tests::test_counter_must_be_sequential ... ignored
+test adversarial_tests::tests::test_counter_replay_attack_rejected ... ignored
+test adversarial_tests::tests::test_counter_rollback_attack_rejected ... ignored
+test adversarial_tests::tests::test_counter_skip_attack_rejected ... ignored
+test adversarial_tests::tests::test_different_tokens_different_embeddings ... ignored
+test adversarial_tests::tests::test_double_session_init_rejected ... ignored
+test adversarial_tests::tests::test_fetch_before_ready_rejected ... ignored
+test adversarial_tests::tests::test_max_requests_enforced ... ignored
+test adversarial_tests::tests::test_out_of_bounds_index_rejected ... ignored
+test adversarial_tests::tests::test_retrieved_embeddings_match_plaintext ... ignored
+test adversarial_tests::tests::test_same_token_same_embedding ... ignored
+test adversarial_tests::tests::test_simple_ot_correctness ... ignored
+test extension::tests::test_simple_ot_extension ... ignored
+test iknp::tests::test_iknp_v2_base_ot ... ignored
+test iknp::tests::test_iknp_v2_full_protocol ... ignored
+test iknp::tests::test_iknp_v2_indices_not_in_plaintext ... ignored
+test iknp::tests::test_iknp_v2_key_agreement ... ignored
+test iknp::tests::test_iknp_v2_server_does_not_learn_delta ... ignored
+test receiver::tests::test_full_ot_flow ... ignored
+test sender::tests::test_sender_session_init ... ignored
+test session::tests::test_counter_mismatch ... ignored
+test session::tests::test_double_initialize ... ignored
+test session::tests::test_session_lifecycle ... ignored
+
+test result: ok. 0 passed; 0 failed; 24 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
