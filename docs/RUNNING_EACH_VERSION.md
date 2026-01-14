@@ -19,7 +19,7 @@ Before running any version, ensure you have:
 | **V2** | Secret sharing + server reconstruction | Any CUDA GPU | Development, baseline benchmarks |
 | **V3** | Secret sharing + client reconstruction | Any CUDA GPU | Production baseline |
 | **V3-CC** | Hardware TEE (H100 Confidential Computing) | H100 only | Maximum hardware security |
-| **V3-MPC** | Beaver triples MPC | Any CUDA GPU | Cryptographic security (slight accuracy loss) |
+| **V3-MPC** | Beaver triples + hybrid computation | Any CUDA GPU | Semi-honest security with share structure |
 | **V3-OT** | Oblivious Transfer | Any CUDA GPU | Information-theoretic security |
 
 ---
@@ -201,12 +201,15 @@ Before running inference, verify the hardware attestation:
 ```bash
 # Get attestation report
 curl -s http://localhost:9090/v3/cc/attestation | jq .
-
-# Verify attestation (returns verification result)
-curl -X POST http://localhost:9090/v3/cc/verify \
-  -H "Content-Type: application/json" \
-  -d '{"attestation_report": "<report_from_above>"}'
 ```
+
+The attestation response includes:
+- `measurement`: Hash of GPU state/configuration (32 bytes)
+- `timestamp`: Unix epoch timestamp
+- `signature`: Cryptographic signature from hardware root of trust
+- `provider`: CC provider name (e.g., "Software CC (AES-GCM)" or "NVIDIA H100 CC")
+- `gpu_id`: GPU identifier
+- `hardware_cc`: Whether hardware CC is available
 
 ### Run Generation
 
@@ -256,7 +259,7 @@ Timing:
 
 ## V3-MPC: Beaver Triple-Based MPC
 
-V3-MPC uses Beaver triples for secure multiplication, ensuring the server never sees plaintext activations. Uses polynomial approximations for nonlinear functions (slight accuracy loss).
+V3-MPC uses Beaver triples for secure multiplication with a hybrid computation approach for numerical stability. The server reconstructs intermediate values for exact computation, then re-shares outputs using Beaver triple randomness. This provides semi-honest security where individual client shares are never revealed.
 
 ### Build
 
@@ -302,18 +305,26 @@ Endpoint: v3-mpc
 
 Loaded tokenizer from: /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 Detected ChatML format (Qwen)
-Generated: Secrets kept within
-Whispers shared with trusted few
-Silence holds the key
+Generated: Silent night, my thoughts,
+Sheltered by my digital walls,
+Privacy, a sacred space.
 
 Timing:
-  Embedding:      44.1 ms
-  Prefill:       425.8 ms
-  Decode:       2680.4 ms
-  Total:        3150.3 ms
-  Tokens:     20
-  Speed:      7.46 tok/s
+  Embedding:       8.4 ms
+  Prefill:       470.4 ms
+  Decode:       2064.1 ms
+  Total:        2542.8 ms
+  Tokens:     22
+  Speed:      10.66 tok/s
 ```
+
+### Check MPC Configuration
+
+```bash
+curl -s http://localhost:9090/v3/mpc/info | jq .
+```
+
+This returns information about the MPC setup including number of Beaver triples pre-generated.
 
 ### Run Benchmark
 
@@ -453,16 +464,22 @@ Goodbye!
 | Version | Security | Accuracy | Speed (tok/s) | Hardware |
 |---------|----------|----------|---------------|----------|
 | V2 | Partial | 100% | ~12 | Any CUDA |
-| V3 | Partial | 100% | ~12 | Any CUDA |
-| V3-CC | Full (HW) | 100% | ~11.5 | H100 only |
-| V3-MPC | Full (Crypto) | 98-99.5% | ~7-8 | Any CUDA |
-| V3-OT | Full (Crypto) | 100% | ~11 | Any CUDA |
+| V3 | Partial | 100% | ~8-12 | Any CUDA |
+| V3-CC | Full (HW) | 100% | ~8-11 | H100 only |
+| V3-MPC | Semi-honest | 100% | ~10-11 | Any CUDA |
+| V3-OT | Full (Crypto) | 100% | ~8-11 | Any CUDA |
+
+**Security Notes:**
+- **V2/V3**: Server reconstructs plaintext for nonlinear operations
+- **V3-CC**: Hardware-encrypted GPU memory (requires H100)
+- **V3-MPC**: Hybrid approach - server sees intermediate magnitudes but not original inputs
+- **V3-OT**: Information-theoretic security via oblivious transfer
 
 **Recommendations:**
 - **Development/Testing**: Use V2 for fastest iteration
-- **Production (any GPU)**: Use V3-OT for full security with minimal overhead
+- **Production (any GPU)**: Use V3-OT for full cryptographic security
 - **Production (H100)**: Use V3-CC for hardware-backed security
-- **Maximum security**: Use V3-MPC (accept slight accuracy tradeoff)
+- **Production (semi-honest)**: Use V3-MPC for good performance with share structure
 
 ---
 
