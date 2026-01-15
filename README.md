@@ -315,7 +315,7 @@ ShardLM is designed to work with any open-weights transformer model. The archite
 
 All protocol versions (V2, V3, V3-OT, V3-MPC, V3-CC) have been tested and benchmarked on both models.
 
-**Planned:**
+**Work in Progress:**
 
 | Model | Parameters | Notes |
 |-------|------------|-------|
