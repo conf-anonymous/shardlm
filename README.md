@@ -6,20 +6,48 @@ ShardLM is a practical system for privacy-preserving LLM inference that combines
 
 **Key Features:**
 - **Strong Privacy**: Server never sees plaintext tokens, embeddings, activations, or logits
-- **Practical Performance**: ~2× overhead vs plaintext inference, 25-46 tokens/second on 1.5B-7B models
+- **Practical Performance**: 20-55 tokens/second on 1.5B-7B models with full cryptographic security
 - **Multiple Security Variants**: Choose between hardware security (V3-CC), cryptographic MPC (V3-MPC), or OT-based protocols (V3-OT)
 - **Constant Overhead**: V3-OT achieves 48 KB cryptographic overhead regardless of model size
 - **Model Agnostic**: Works with any open-weights transformer model (tested on Qwen 2.5 1.5B/7B)
+
+## Benchmark Results
+
+All benchmarks measured on NVIDIA H100 80GB HBM3 with 20 runs, 3 warmup iterations.
+
+### Qwen 2.5 1.5B Instruct
+
+| Version | Throughput (tok/s) | Mean Latency (ms) | Overhead vs V3 |
+|---------|-------------------|-------------------|----------------|
+| **V3 (Baseline)** | **54.82** | 355.74 | — |
+| V3-OT | 41.49 | 466.60 | +31.2% |
+| V2 | 38.58 | 502.16 | +41.2% |
+| V3-CC | 37.80 | 512.79 | +44.2% |
+| V3-MPC | 32.63 | 592.53 | +66.6% |
+
+### Qwen 2.5 7B Instruct
+
+| Version | Throughput (tok/s) | Mean Latency (ms) | Overhead vs V3 |
+|---------|-------------------|-------------------|----------------|
+| **V3 (Baseline)** | **26.97** | 722.17 | — |
+| V3-OT | 24.20 | 801.59 | +11.0% |
+| V3-CC | 23.04 | 840.32 | +16.4% |
+| V2 | 21.30 | 909.46 | +25.9% |
+| V3-MPC | 20.09 | 964.20 | +33.5% |
+
+For complete benchmark data including raw timings and statistical analysis, see:
+- [docs/BENCHMARKS.md](docs/BENCHMARKS.md) - Qwen 2.5 1.5B detailed results
+- [docs/BENCHMARKS_7B.md](docs/BENCHMARKS_7B.md) - Qwen 2.5 7B detailed results
 
 ## Quick Start (GPU)
 
 ### Prerequisites
 
 - **NVIDIA GPU** with CUDA support (required for V2/V3 versions)
-  - Qwen 2.5 1.5B: ~3GB VRAM (most GPUs)
-  - Qwen 2.5 7B: ~14GB VRAM (A10G, RTX 4090, or better)
-  - V3-CC: Requires H100 with Confidential Computing mode
-- CUDA 12.0+
+  - Qwen 2.5 1.5B: ~4 GB VRAM (most modern GPUs)
+  - Qwen 2.5 7B: ~16 GB VRAM (A10G, RTX 4090, A100, H100)
+  - V3-CC: Requires H100 with Confidential Computing capability (falls back to software AES-GCM on non-CC environments)
+- CUDA 12.0+ (tested with CUDA 12.8)
 - Linux (tested on Ubuntu 22.04)
 
 ### Automated Setup (Recommended)
@@ -80,32 +108,32 @@ SHARDLM_V2_PORT=9090 \
 ```
 Generating from: "Hello!"
 Server: http://localhost:9090
-Endpoint: v2
+Endpoint: v3
 
 Loaded tokenizer from: /workspace/qwen2.5-1.5b-instruct-weights/tokenizer.json
 Detected ChatML format (Qwen)
 Generated: Hello! How can I assist you today?
 
 Timing:
-  Embedding:      44.9 ms
-  Prefill:       376.9 ms
-  Decode:        836.0 ms
-  Total:        1257.8 ms
+  Embedding:       9.2 ms
+  Prefill:       346.6 ms
+  Decode:        182.5 ms
+  Total:         538.3 ms
   Tokens:     10
-  Speed:      11.96 tok/s
+  Speed:      37.14 tok/s
 ```
 
 ## Running Different Protocol Versions
 
 ShardLM supports multiple protocol versions with different security/performance trade-offs:
 
-| Version | Security Model | GPU Required | Use Case |
-|---------|---------------|--------------|----------|
-| **V2** | Secret sharing + server reconstruction | Any CUDA GPU | Development, baseline benchmarks |
-| **V3** | Secret sharing + client reconstruction | Any CUDA GPU | Production baseline |
-| **V3-CC** | Hardware TEE (H100 Confidential Computing) | H100 only | Maximum hardware security |
-| **V3-MPC** | Beaver triples MPC | Any CUDA GPU | Cryptographic security |
-| **V3-OT** | Oblivious Transfer | Any CUDA GPU | Information-theoretic security |
+| Version | Security Model | GPU Required | Overhead (1.5B) | Use Case |
+|---------|---------------|--------------|-----------------|----------|
+| **V3** | Secret sharing + client reconstruction | Any CUDA GPU | Baseline | Production baseline (fastest) |
+| **V3-OT** | Oblivious Transfer | Any CUDA GPU | +31% | Best balance of security/speed |
+| **V2** | Secret sharing + server reconstruction | Any CUDA GPU | +41% | Development, compatibility |
+| **V3-CC** | Hardware TEE (H100 Confidential Computing) | H100 (or fallback) | +44% | Hardware-based security |
+| **V3-MPC** | Beaver triples MPC | Any CUDA GPU | +67% | Strongest cryptographic guarantees |
 
 Use the `--endpoint` flag to select the protocol version:
 
@@ -257,16 +285,20 @@ shardlm/
 │   ├── cli/                 # Command-line demo
 │   ├── wasm-client/         # Browser WASM SDK
 │   └── v2/                  # GPU-accelerated infrastructure
-│       ├── core/            # GPU config, model architecture
-│       ├── sharing/         # CUDA-accelerated secret sharing
+│       ├── core/            # GPU config, model architecture, CUDA kernels
+│       ├── sharing/         # CUDA-accelerated secret sharing, MPC, OT
 │       ├── protocol/        # Extended protocol (128K context)
-│       ├── model/           # Model loader, KV cache
+│       ├── model/           # Model loader, KV cache, weight caching
 │       ├── server/          # V2/V3 REST API server (GPU)
 │       ├── client/          # Headless client for benchmarking
-│       └── cc/              # Confidential Computing module
-├── scripts/                 # Setup and benchmark scripts
-├── benchmark_results/       # Pre-recorded benchmark data
-├── docs/                    # Technical specifications
+│       └── cc/              # Confidential Computing (H100 CC, AES-GCM fallback)
+├── scripts/
+│   ├── setup_nvidia_machine.sh  # Automated setup for GPU machines
+│   ├── run_benchmarks.sh        # Official benchmark runner
+│   ├── run_tests.sh             # Test runner
+│   └── run_examples.sh          # Example runner
+├── benchmarks_results/      # Benchmark outputs (JSON + text)
+├── docs/                    # Technical specifications & benchmarks
 └── Cargo.toml               # Workspace configuration
 ```
 
@@ -274,14 +306,16 @@ shardlm/
 
 ShardLM is designed to work with any open-weights transformer model. The architecture is model-agnostic and supports standard transformer components (attention, FFN, RMSNorm, RoPE).
 
-**Tested Models:**
+**Fully Tested Models:**
 
-| Model | Parameters | API Version | Status |
-|-------|------------|-------------|--------|
-| Qwen 2.5 1.5B Instruct | 1.5B | V2/V3 (GPU) | Fully tested |
-| Qwen 2.5 7B Instruct | 7B | V2/V3 (GPU) | Fully tested |
+| Model | Parameters | Layers | Hidden Dim | GPU Memory | All Versions |
+|-------|------------|--------|------------|------------|--------------|
+| Qwen 2.5 1.5B Instruct | 1.5B | 28 | 1,536 | ~4 GB | V2, V3, V3-OT, V3-MPC, V3-CC |
+| Qwen 2.5 7B Instruct | 7B | 28 | 3,584 | ~16 GB | V2, V3, V3-OT, V3-MPC, V3-CC |
 
-**In Progress:**
+All protocol versions (V2, V3, V3-OT, V3-MPC, V3-CC) have been tested and benchmarked on both models.
+
+**Planned:**
 
 | Model | Parameters | Notes |
 |-------|------------|-------|
@@ -334,24 +368,67 @@ cargo test -p shardlm-v2-core -p shardlm-v2-model
 
 ## Benchmarking
 
+### Quick Benchmark
+
 ```bash
-# Basic benchmark (V2 endpoint)
-./target/release/shardlm-v2-client benchmark -s http://localhost:9090 --runs 10 --warmup 2
+# Basic benchmark (V3 endpoint, 10 runs)
+./target/release/shardlm-v2-client benchmark \
+  -s http://localhost:9090 \
+  -e v3 \
+  -r 10 \
+  -w 3 \
+  -m 50
 
 # V3-OT endpoint benchmark with JSON output
-./target/release/shardlm-v2-client benchmark -s http://localhost:9090 \
-  --runs 10 --warmup 2 --endpoint v3-ot --output results.json
+./target/release/shardlm-v2-client benchmark \
+  -s http://localhost:9090 \
+  -e v3-ot \
+  -r 20 \
+  -w 3 \
+  -m 50 \
+  -o results.json \
+  --raw
 ```
+
+### Full Benchmark Suite
+
+Run the official benchmark script for all protocol versions:
+
+```bash
+# Run all benchmarks (requires rebuilding server with different features)
+./scripts/run_benchmarks.sh
+
+# Run specific versions
+./scripts/run_benchmarks.sh --v2          # V2 only
+./scripts/run_benchmarks.sh --v3          # V3 only
+./scripts/run_benchmarks.sh --v3-ot       # V3-OT only
+./scripts/run_benchmarks.sh --v3-mpc      # V3-MPC only
+./scripts/run_benchmarks.sh --v3-cc       # V3-CC only
+
+# Configure iterations and max tokens
+./scripts/run_benchmarks.sh --iterations 20 --max-tokens 50
+```
+
+Results are saved to `benchmarks_results/<timestamp>/` with JSON and text outputs.
 
 ## Documentation
 
+### Getting Started
 - **[RUNNING_EACH_VERSION.md](docs/RUNNING_EACH_VERSION.md)** - Step-by-step tutorial for running each protocol version (V2, V3, V3-CC, V3-MPC, V3-OT)
+- [HARDWARE_REQUIREMENTS.md](docs/HARDWARE_REQUIREMENTS.md) - Hardware requirements guide
+
+### Benchmark Results
+- **[BENCHMARKS.md](docs/BENCHMARKS.md)** - Official benchmark results for Qwen 2.5 1.5B (H100)
+- **[BENCHMARKS_7B.md](docs/BENCHMARKS_7B.md)** - Official benchmark results for Qwen 2.5 7B (H100)
+
+### Technical Specifications
 - [V3_REFERENCE_IMPLEMENTATION.md](docs/V3_REFERENCE_IMPLEMENTATION.md) - Comprehensive V3 technical documentation
 - [V2_SECURE_INFERENCE_SPEC.md](docs/V2_SECURE_INFERENCE_SPEC.md) - V2 secure inference specification
 - [V2_SECURITY_MODEL.md](docs/V2_SECURITY_MODEL.md) - Security model and threat analysis
-- [V3_OT_BENCHMARK_REPORT.md](docs/V3_OT_BENCHMARK_REPORT.md) - Performance benchmarks
+
+### Analysis
+- [V3_OT_BENCHMARK_REPORT.md](docs/V3_OT_BENCHMARK_REPORT.md) - V3-OT performance analysis
 - [SCALING_ANALYSIS.md](docs/SCALING_ANALYSIS.md) - Scaling analysis across model sizes
-- [HARDWARE_REQUIREMENTS.md](docs/HARDWARE_REQUIREMENTS.md) - Hardware requirements guide
 
 ## License
 
