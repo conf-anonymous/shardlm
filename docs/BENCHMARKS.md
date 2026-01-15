@@ -1,6 +1,6 @@
 # ShardLM Benchmark Results
 
-This document contains the official benchmark results for ShardLM secure inference implementations. All measurements were conducted on legitimate, production-ready implementations with no mocks, placeholders, or simulations.
+This document contains the official benchmark results for ShardLM secure inference implementations. 
 
 ## Benchmark Environment
 

@@ -1,6 +1,6 @@
 # ShardLM Benchmark Results - Qwen 2.5 7B
 
-This document contains the official benchmark results for ShardLM secure inference implementations using the **Qwen 2.5 7B Instruct** model. All measurements were conducted on legitimate, production-ready implementations with no mocks, placeholders, or simulations.
+This document contains the official benchmark results for ShardLM secure inference implementations using the **Qwen 2.5 7B Instruct** model. 
 
 ## Benchmark Environment
 
